@@ -1,0 +1,22 @@
+{
+  "name": "js-sandbox",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "automerge": "^0.7.7",
+    "immutable": "^3.8.2",
+    "immutablediff": "^0.4.4",
+    "react": "^16.0.0",
+    "react-dom": "^16.0.0",
+    "react-scripts": "1.0.14",
+    "slate": "file:../slate/packages/slate",
+    "slate-diff": "git://github.com/nathanfu88/slatediff.git",
+    "slate-react": "^0.12.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}
