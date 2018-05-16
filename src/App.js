@@ -100,10 +100,10 @@ let testVal = []
 // })
 // doc2 = Automerge.merge(doc2, doc1)
 
-doc1 = Automerge.change(doc1, 'Initialize Slate state', doc => {
-  doc.ops = []
-})
-doc2 = Automerge.merge(doc2, doc1)
+// doc1 = Automerge.change(doc1, 'Initialize Slate state', doc => {
+//   doc.ops = []
+// })
+// doc2 = Automerge.merge(doc2, doc1)
 
 class App extends React.Component {
 
@@ -123,26 +123,83 @@ class App extends React.Component {
       this.historyCheck = this.historyCheck.bind(this)
     }
 
+    componentDidMount = () => {
+      console.log(this.state.value.document.toJS())
+      doc1 = Automerge.change(doc1, 'Initialize Slate state', doc => {
+        doc.note = this.state.value.document.toJS();
+      })
+    }
+
     state = {
       value: initialValue,
       value2: initialValue2,
     }
 
+    getPath = (op) => {
+      if (op.get("path").indexOf("characters") > -1) {
+        return op.get("path").replace("characters", "leaves/0/text").split("/").slice(1,)
+      } else {
+        return op.get("path").split("/").slice(1,)
+      }
+
+    }
+
     onChange1 = ({ operations, value }) => {
+
+      var differences = diff(this.state.value.document, value.document);
+
       this.setState({ value: value })
 
-      // Ignore selection changes
-      if (operations.size > 1) {
-        // console.log(operations)
-        // console.log(operations.toJS())
+      if (differences.size > 0) {
+
+        // Using the difference obtained from the Immutable diff library,
+        // apply the operations to the Automerge document.
         const doc1b = Automerge.change(doc1, 'Editor1 change', doc => {
-          operations.forEach(op => {
-            if (SUPPORTED_SLATE_OPS.includes(op.type)) {
-              console.log(op.toJS())
-              doc.ops.push(op.toJS())
+          differences.forEach(op => {
+            var currentNode = doc.note;
+            var path;
+            var nodesExceptLast;
+            var lastNode;
+            var data;
+
+            if (op.get("op") == "add") {
+              // Operation inserts an element into a list or map.
+              path = this.getPath(op);
+              nodesExceptLast = path.slice(0, -1);
+              lastNode = path.slice(-1);
+              if (op.get("value").object == "character") {
+                data = op.get("value").text;
+              } else {
+                data = op.get("value").toJS();
+              }
+              nodesExceptLast.forEach(el => {
+                currentNode = currentNode[el];
+              })
+              lastNode = !isNaN(lastNode) ? parseInt(lastNode) : lastNode;
+              currentNode.insertAt(lastNode, data);
+            }
+            if (op.get("op") == "replace") {
+              // Operation replaces an element in a list or map.
+              path = this.getPath(op);
+              nodesExceptLast = path.slice(0, -2);
+              lastNode = path.slice(-2, -1);
+              data = op.get("value");
+              nodesExceptLast.forEach(el => {
+                currentNode = currentNode[el];
+              })
+              currentNode[lastNode] = data;
+            }
+            if (op.get("op") == "remove") {
+              // Operation removes an element from a list or map.
+              path = this.getPath(op);
+              nodesExceptLast = path.slice(0, -1);
+              lastNode = path.slice(-1);
+              nodesExceptLast.forEach(el => {
+                currentNode = currentNode[el];
+              })
+              currentNode.deleteAt(parseInt(lastNode));
             }
           })
-          // doc.note = value
         })
 
         // Update doc2 changes
