@@ -2,6 +2,7 @@ import React from 'react'
 import { Editor } from 'slate-react'
 import { Value, Block } from 'slate'
 import diff from './intelie_diff/diff'
+import customToJSON from "./customToJson"
 import slateDiff from 'slate-diff'
 import Automerge from 'automerge'
 
@@ -124,9 +125,9 @@ class App extends React.Component {
     }
 
     componentDidMount = () => {
-      console.log(this.state.value.document.toJS())
+      console.log(customToJSON(this.state.value.document))
       doc1 = Automerge.change(doc1, 'Initialize Slate state', doc => {
-        doc.note = this.state.value.document.toJS();
+        doc.note = customToJSON(this.state.value.document);
       })
     }
 
@@ -136,12 +137,11 @@ class App extends React.Component {
     }
 
     getPath = (op) => {
-      if (op.get("path").indexOf("characters") > -1) {
-        return op.get("path").replace("characters", "leaves/0/text").split("/").slice(1,)
-      } else {
+      // if (op.get("path").indexOf("characters") > -1) {
+      //   return op.get("path").replace("characters", "leaves/0/text").split("/").slice(1,)
+      // } else {
         return op.get("path").split("/").slice(1,)
-      }
-
+      // }
     }
 
     onChange1 = ({ operations, value }) => {
@@ -157,46 +157,30 @@ class App extends React.Component {
         const doc1b = Automerge.change(doc1, 'Editor1 change', doc => {
           differences.forEach(op => {
             var currentNode = doc.note;
-            var path;
-            var nodesExceptLast;
-            var lastNode;
+            var path = this.getPath(op);;
+            var nodesExceptLast = path.slice(0, -1);;
+            var lastNode = path.slice(-1);;
             var data;
+
+            // Move pointer of currentNode to last possible reference before
+            // we do the insertion, replacement or deletion.
+            nodesExceptLast.forEach(el => {
+              currentNode = currentNode[el];
+            })
 
             if (op.get("op") == "add") {
               // Operation inserts an element into a list or map.
-              path = this.getPath(op);
-              nodesExceptLast = path.slice(0, -1);
-              lastNode = path.slice(-1);
-              if (op.get("value").object == "character") {
-                data = op.get("value").text;
-              } else {
-                data = op.get("value").toJS();
-              }
-              nodesExceptLast.forEach(el => {
-                currentNode = currentNode[el];
-              })
+              data = customToJSON(op.get("value"));
               lastNode = !isNaN(lastNode) ? parseInt(lastNode) : lastNode;
               currentNode.insertAt(lastNode, data);
             }
             if (op.get("op") == "replace") {
               // Operation replaces an element in a list or map.
-              path = this.getPath(op);
-              nodesExceptLast = path.slice(0, -2);
-              lastNode = path.slice(-2, -1);
               data = op.get("value");
-              nodesExceptLast.forEach(el => {
-                currentNode = currentNode[el];
-              })
               currentNode[lastNode] = data;
             }
             if (op.get("op") == "remove") {
               // Operation removes an element from a list or map.
-              path = this.getPath(op);
-              nodesExceptLast = path.slice(0, -1);
-              lastNode = path.slice(-1);
-              nodesExceptLast.forEach(el => {
-                currentNode = currentNode[el];
-              })
               currentNode.deleteAt(parseInt(lastNode));
             }
           })
@@ -217,7 +201,7 @@ class App extends React.Component {
 
       if (operations.size > 1) {
         const doc2b = Automerge.change(doc2, 'Editor2 change', doc => {
-          doc.note = value.toJSON()
+          doc.note = customToJSON(value)
           // doc.note = value
         })
 
@@ -269,7 +253,7 @@ class App extends React.Component {
         if (val) {
           console.log("value.object: ", val.object)
           if (val.object === 'block') {
-            const valJSON = val.toJSON()
+            const valJSON = customToJSON(val)
             console.log('blockJSON: ', valJSON)
             console.log('blockSlate: ', Block.fromJSON(valJSON))
           }
@@ -303,10 +287,10 @@ class App extends React.Component {
       })
       let path = result.slice(0, result.length-1)
       const offset = result[result.length-1]
-    
+
       // Handle single node path
       if (path.length === 0) { path = [ offset ] }
-    
+
       // console.log('path: ', path)
       // console.log('offset: ', offset)
 
@@ -363,13 +347,13 @@ class App extends React.Component {
             <button onClick={() => {console.log(Automerge.getHistory(doc1))}}>Editor1 Automerge History</button>
             <button onClick={() => {console.log(Automerge.getHistory(doc2))}}>Editor2 Automerge History</button>
             <button onClick={this.lastHistoryValue}>Editor2 Last History Value JSON</button>
-            <button onClick={() => {console.log(this.state.value2.toJSON())}}>Editor2 JSON</button>
+            <button onClick={() => {console.log(customToJSON(this.state.value2))}}>Editor2 JSON</button>
             <button onClick={this.findChanges}>Get Changes</button>
             <hr></hr>
             <button onClick={() => {console.log(this.state.value)}}>Value1 Slate</button>
             <button onClick={() => {console.log(this.state.value2)}}>Value2 Slate</button>
-            <button onClick={() => {console.log(this.state.value.toJSON())}}>Val1 JSON</button>
-            <button onClick={() => {console.log(this.state.value2.toJSON())}}>Val2 JSON</button>
+            <button onClick={() => {console.log(customToJSON(this.state.value))}}>Val1 JSON</button>
+            <button onClick={() => {console.log(customToJSON(this.state.value2))}}>Val2 JSON</button>
             <button onClick={this.removeNode}>Remove Node</button>
             <button onClick={this.immutablePatch}>Traverse Diff</button>
             <button onClick={this.reflect}>Reflect Test</button>
