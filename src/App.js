@@ -6,6 +6,10 @@ import customToJSON from "./customToJson"
 import slateDiff from 'slate-diff'
 import Automerge from 'automerge'
 
+var path = require('./intelie_diff/path');
+var concatPath = path.concat,
+                  escape = path.escape;
+
 const initialValue = Value.fromJSON({
   document: {
     nodes: [
@@ -89,6 +93,18 @@ const SUPPORTED_SLATE_OPS = [
   'remove_node'
 ]
 
+const SUPPORTED_SLATE_SET_OBJECTS = [
+  'document',
+  'block',
+  'text',
+  'character'
+]
+
+const SUPPORTED_SLATE_PATH_OBJECTS = [
+  'nodes',
+  'characters'
+]
+
 // let doc1 = Automerge.initImmutable();
 // let doc2 = Automerge.initImmutable();
 let doc1 = Automerge.init();
@@ -122,6 +138,10 @@ class App extends React.Component {
       this.doc2inc = this.doc2inc.bind(this)
       this.doc2dec = this.doc2dec.bind(this)
       this.historyCheck = this.historyCheck.bind(this)
+
+      this.useChangeOps = this.useChangeOps.bind(this)
+      this.buildObjectIdMap = this.buildObjectIdMap.bind(this)
+      this.mockAutomergeDelete = this.mockAutomergeDelete.bind(this)
     }
 
     componentDidMount = () => {
@@ -129,11 +149,13 @@ class App extends React.Component {
       doc1 = Automerge.change(doc1, 'Initialize Slate state', doc => {
         doc.note = customToJSON(this.state.value.document);
       })
+      this.buildObjectIdMap()
     }
 
     state = {
       value: initialValue,
       value2: initialValue2,
+      pathMap: {}
     }
 
     getPath = (op) => {
@@ -262,11 +284,34 @@ class App extends React.Component {
     }
 
     reflect() {
-      const ops = slateDiff(this.state.value, this.state.value2)
-      console.log(ops)
-      const change = this.state.value.change()
-      change.applyOperations(ops)
-      this.setState({ value: change.value })
+      const history = Automerge.getHistory(doc1)
+      const automergeOps = history[history.length - 1].change.ops
+      const slateOps = []
+
+      automergeOps.map(op => {
+        if (op.action === "del") {
+          let offset = op.key.slice(op.key.indexOf(':') + 1,)
+          let slatePath = this.state.pathMap[op.obj].match(/\d+/g).map(x => { 
+              return parseInt(x, 10); 
+          });
+          offset = parseInt(offset, 10) - 1
+
+          const slateOp = {
+            type: 'remove_text',
+            path: slatePath,
+            offset: offset,
+            text: '*',
+            marks: []
+          }
+          slateOps.push(slateOp)
+        }
+        
+      })
+      // TODO: Merge like operations for `remove_text` and `insert_text`
+
+      const change = this.state.value2.change()
+      change.applyOperations(slateOps)
+      this.setState({ value2: change.value })
     }
 
     removeNode() {
@@ -330,6 +375,89 @@ class App extends React.Component {
     }
     /////////////////////////////
 
+    useChangeOps() {
+      const firstObjOps = Automerge.getHistory(doc1)[0].change.ops
+
+      firstObjOps.map(op => {
+        if (op.action === 'set') {
+          if (SUPPORTED_SLATE_SET_OBJECTS.includes(op.value)) {
+            console.log(op)
+          }
+        }
+        else if (op.action === 'link') {
+          if (SUPPORTED_SLATE_PATH_OBJECTS.includes(op.key)) {
+            console.log(op)
+          }
+        }
+      })
+    }
+
+    buildObjectIdMap() {
+      const snapshot = Automerge.getHistory(doc1)[0].snapshot.note
+
+      this.setState({pathMap: this.deepTraverse(snapshot, null, {}) }) 
+    }
+
+    deepTraverse(obj, p, pathMap) {
+      let path = p || ''
+      const isList = obj instanceof Array
+
+      // Iterate object keys instead
+      if (!isList) {
+        for (var key in obj) {
+          if (obj.hasOwnProperty(key)) {
+            if (SUPPORTED_SLATE_PATH_OBJECTS.includes(key)) {
+              // console.log("key: ", key)
+              // console.log("value: ", obj[key])
+              // console.log("path: ", concatPath(path, escape(key)))
+              const thisPath = concatPath(path, escape(key))
+              pathMap[obj[key]._objectId] = thisPath
+              this.deepTraverse(obj[key], thisPath, pathMap)
+            }
+          }
+        }
+      }
+      else {
+        // Assumed to be a list
+        obj.forEach((value, key) => {
+          // console.log("value: ", value)
+          // console.log("path: ", concatPath(path, escape(key)))
+          const thisPath = concatPath(path, escape(key))
+          pathMap[value._objectId] = thisPath
+          this.deepTraverse(value, thisPath, pathMap)
+        });
+      }
+
+      return pathMap
+    }
+
+    mockAutomergeDelete() {
+      const history = Automerge.getHistory(doc1)
+      const op = history[history.length - 1].change.ops[0]
+
+      if (op.action === "del") {
+        let offset = op.key.slice(op.key.indexOf(':') + 1,)
+        let slatePath = this.state.pathMap[op.obj].match(/\d+/g).map(x => { 
+            return parseInt(x, 10); 
+        });
+        offset = parseInt(offset, 10) - 1
+
+        const slateOp = {
+          type: 'remove_text',
+          path: slatePath,
+          offset: offset,
+          text: '*',
+          marks: []
+        }
+        
+        const change = this.state.value2.change()
+        change.applyOperation(slateOp)
+        this.setState({ value2: change.value })
+      }
+    }
+
+    /////////////////////////////
+
     render() {
         return (
           <div>
@@ -363,6 +491,11 @@ class App extends React.Component {
             <button onClick={this.doc2inc}>Doc2 x+1</button>
             <button onClick={this.doc2dec}>Doc2 x-1</button>
             <button onClick={this.historyCheck}>History Check</button>
+            <hr></hr>
+            <button onClick={this.useChangeOps}>Use Change Ops</button>
+            <button onClick={this.buildObjectIdMap}>Deep Traverse</button>
+            <button onClick={() => {console.log(this.state.pathMap)}}>Log Path Map</button>
+            <button onClick={this.mockAutomergeDelete}>Mock Automerege Delete</button>
             {/* <button onClick={() => {console.log(diff(this.state.value.document, this.state.value2.document))}}>ImmutableDiff</button>
             <button onClick={() => {console.log(diff(this.state.value2.document, this.state.value.document))}}>Diff2to1</button>
             <button onClick={() => {console.log(Value.fromJSON(rtv).toJSON())}}>Doc3 JSON</button>
