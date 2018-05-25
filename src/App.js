@@ -258,13 +258,13 @@ class App extends React.Component {
               marks: [],
               text: text,
             }
-            currentNode.characters.splice(offset, 0, characterNode);
+            currentNode.characters.insertAt(offset, characterNode);
             break;
           case "remove_text":
             path.forEach(el => {
               currentNode = currentNode.nodes[el];
             })
-            currentNode.characters.splice(offset, text.length);
+            currentNode.characters.deleteAt(offset, text.length);
             break;
           case "split_node":
             rest.forEach(el => {
@@ -279,7 +279,7 @@ class App extends React.Component {
               childOne.nodes.splice(position)
               childTwo.nodes.splice(0, position)
             }
-            currentNode.nodes.splice(index + 1, 0, childTwo);
+            currentNode.nodes.insertAt(index + 1, childTwo);
             // Currently ignore properties
             break;
           case "merge_node":
@@ -289,27 +289,23 @@ class App extends React.Component {
             let one = currentNode.nodes[index - 1];
             let two = currentNode.nodes[index];
             if (one.object == "text") {
-              two.characters.forEach(char => {
-                one.characters.push(char);
-              })
+              one.characters.push(...two.characters)
             } else {
-              two.nodes.forEach(char => {
-                one.nodes.push(char);
-              })
+              one.nodes.push(...two.nodes)
             }
-            currentNode.nodes.splice(index, 0);
+            currentNode.nodes.deleteAt(index, 1);
             break;
           case "insert_node":
             rest.forEach(el => {
               currentNode = currentNode.nodes[el];
             })
-            currentNode.splice(index, 0, customToJSON(node));
+            currentNode.insertAt(index, customToJSON(node));
             break;
           case "remove_node":
             rest.forEach(el => {
               currentNode = currentNode.nodes[el];
             })
-            currentNode.splice(index, 1);
+            currentNode.deleteAt(index, 1);
             break;
           case "set_node":
             path.forEach(el => {
@@ -329,7 +325,7 @@ class App extends React.Component {
             oldParentPath.forEach(el => {
               currentNode = currentNode.nodes[el];
             })
-            let nodeToMove = currentNode.splice(oldIndex, 1);
+            let nodeToMove = currentNode.deleteAt(oldIndex, 1);
 
             // Find the new target...
             if (
@@ -357,7 +353,7 @@ class App extends React.Component {
             }
 
             // Insert the new node to its new parent.
-            currentNode.splice(newIndex, 0, nodeToMove);
+            currentNode.insertAt(newIndex, nodeToMove);
             break;
         }
       })
