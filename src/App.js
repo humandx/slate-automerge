@@ -209,13 +209,46 @@ class App extends React.Component {
           return;
         }
         const {
-          path, offset, text, marks,
+          path, offset, text, length, mark,
           node, position, properties, newPath
         } = op;
         const index = path[path.length - 1];
         const rest = path.slice(0, -1)
         let currentNode = doc.note;
+        let characters;
         switch (op.type) {
+          case "add_mark":
+            path.forEach(el => {
+              currentNode = currentNode.nodes[el];
+            })
+            currentNode.characters.forEach((char, i) => {
+              if (i < offset) return;
+              if (i >= offset + length) return;
+              const hasMark = char.marks.find((charMark) => {
+                charMark.type == mark.type
+              })
+              if (!hasMark) {
+                char.marks.push(mark)
+              }
+            })
+            break;
+          case "remove_mark":
+            path.forEach(el => {
+              currentNode = currentNode.nodes[el];
+            })
+            currentNode.characters.forEach((char, i) => {
+              if (i < offset) return;
+              if (i >= offset + length) return;
+              const markIndex = char.marks.findIndex((charMark) => {
+                charMark.type == mark.type
+              })
+              if (markIndex) {
+                char.marks.deleteAt(markIndex, 1);
+              }
+            })
+            break;
+          case "set_mark":
+            console.log("NOT IMPLEMENTED YET")
           case "insert_text":
             path.forEach(el => {
               currentNode = currentNode.nodes[el];
