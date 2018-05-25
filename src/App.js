@@ -218,6 +218,7 @@ class App extends React.Component {
         let characters;
         switch (op.type) {
           case "add_mark":
+            // Untested
             path.forEach(el => {
               currentNode = currentNode.nodes[el];
             })
@@ -225,7 +226,7 @@ class App extends React.Component {
               if (i < offset) return;
               if (i >= offset + length) return;
               const hasMark = char.marks.find((charMark) => {
-                charMark.type == mark.type
+                return charMark.type == mark.type
               })
               if (!hasMark) {
                 char.marks.push(mark)
@@ -233,6 +234,7 @@ class App extends React.Component {
             })
             break;
           case "remove_mark":
+            // Untested
             path.forEach(el => {
               currentNode = currentNode.nodes[el];
             })
@@ -240,7 +242,7 @@ class App extends React.Component {
               if (i < offset) return;
               if (i >= offset + length) return;
               const markIndex = char.marks.findIndex((charMark) => {
-                charMark.type == mark.type
+                return charMark.type == mark.type
               })
               if (markIndex) {
                 char.marks.deleteAt(markIndex, 1);
@@ -248,7 +250,21 @@ class App extends React.Component {
             })
             break;
           case "set_mark":
-            console.log("NOT IMPLEMENTED YET")
+            // Untested
+            path.forEach(el => {
+              currentNode = currentNode.nodes[el];
+            })
+            currentNode.characters.forEach((char, i) => {
+              if (i < offset) return;
+              if (i >= offset + length) return;
+              const markIndex = char.marks.findIndex((charMark) => {
+                return charMark.type == mark.type
+              })
+              if (markIndex) {
+                char.marks[markIndex] = mark;
+              }
+            })
+            break;
           case "insert_text":
             path.forEach(el => {
               currentNode = currentNode.nodes[el];
@@ -280,7 +296,16 @@ class App extends React.Component {
               childTwo.nodes.splice(0, position)
             }
             currentNode.nodes.insertAt(index + 1, childTwo);
-            // Currently ignore properties
+            if (properties) {
+              if (currentNode.nodes[index + 1].object !== "text") {
+                let propertiesJSON = customToJSON(properties);
+                Object.keys(propertiesJSON).forEach(key => {
+                  if (propertiesJSON.key) {
+                    currentNode.nodes[index + 1][key] = propertiesJSON.key;
+                  }
+                })
+              }
+            }
             break;
           case "merge_node":
             rest.forEach(el => {

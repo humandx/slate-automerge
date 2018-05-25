@@ -92,7 +92,23 @@ const toJSON = (value, options = {}) => {
         case "value":
             return valueJSON(value, options)
         default:
-            return value.toJSON();
+            if (typeof value.toJSON === "function") {
+              return value.toJSON();
+            } else {
+              const keys = Object.keys(value);
+              let val = {}
+              keys.forEach(key => {
+                if (!value.key) {
+                  return;
+                }
+                if (typeof value.key.toJSON === "function") {
+                  val[key] = value.key.toJSON();
+                } else {
+                  val[key] = value.key;
+                }
+              });
+              return val;
+            }
     }
 
 }
