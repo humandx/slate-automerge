@@ -122,6 +122,10 @@ let testVal = []
 // })
 // doc2 = Automerge.merge(doc2, doc1)
 
+const allowedOperations = [
+  "insert_text", "remove_text", "insert_node", "split_node", "remove_node", "merge_node"
+];
+
 class App extends React.Component {
 
     constructor(props) {
@@ -166,6 +170,111 @@ class App extends React.Component {
       // }
     }
 
+    applyImmutableDiffOperations = (doc, differences) => {
+        differences.forEach(op => {
+        var currentNode = doc.note;
+        var path = this.getPath(op);;
+        var nodesExceptLast = path.slice(0, -1);;
+        var lastNode = path.slice(-1);;
+        var data;
+
+        // Move pointer of currentNode to last possible reference before
+        // we do the insertion, replacement or deletion.
+        nodesExceptLast.forEach(el => {
+          currentNode = currentNode[el];
+        })
+
+        if (op.get("op") == "add") {
+          // Operation inserts an element into a list or map.
+          data = customToJSON(op.get("value"));
+          lastNode = !isNaN(lastNode) ? parseInt(lastNode) : lastNode;
+          currentNode.insertAt(lastNode, data);
+        }
+        if (op.get("op") == "replace") {
+          // Operation replaces an element in a list or map.
+          data = op.get("value");
+          currentNode[lastNode] = data;
+        }
+        if (op.get("op") == "remove") {
+          // Operation removes an element from a list or map.
+          currentNode.deleteAt(parseInt(lastNode));
+        }
+      })
+    }
+
+    applySlateOperations = (doc, operations) => {
+      operations.forEach(op => {
+        if (allowedOperations.indexOf(op.type) == -1) {
+          return;
+        }
+        const {path, offset, text, marks, node, position} = op;
+        const index = path[path.length - 1];
+        const rest = path.slice(0, -1)
+        let currentNode = doc.note;
+        switch (op.type) {
+          case "insert_text":
+            path.forEach(el => {
+              currentNode = currentNode.nodes[el];
+            })
+            const characterNode = {
+              object: "character",
+              marks: [],
+              text: text,
+            }
+            currentNode.characters.splice(offset, 0, characterNode);
+            break;
+          case "remove_text":
+            path.forEach(el => {
+              currentNode = currentNode.nodes[el];
+            })
+            currentNode.characters.splice(offset, text.length);
+            break;
+          case "split_node":
+            rest.forEach(el => {
+              currentNode = currentNode.nodes[el];
+            })
+            let childOne = currentNode.nodes[index];
+            let childTwo = JSON.parse(JSON.stringify(currentNode.nodes[index]));
+            if (childOne.object == "text") {
+              childOne.characters.splice(position)
+              childTwo.characters.splice(0, position)
+            } else {
+              childOne.nodes.splice(position)
+              childTwo.nodes.splice(0, position)
+            }
+            currentNode.nodes.splice(index + 1, 0, childTwo);
+            // Currently ignore properties
+            break;
+          case "merge_node":
+            // THIS DOESN'T WORK, CONCAT does not work
+            rest.forEach(el => {
+              currentNode = currentNode.nodes[el];
+            })
+            let one = currentNode.nodes[index - 1];
+            let two = currentNode.nodes[index];
+            if (one.object == "text") {
+              one.characters.concat(two.characters);
+            } else {
+              one.nodes.concat(two.nodes);
+            }
+            currentNode.nodes.splice(index, 0);
+            break;
+          case "insert_node":
+            rest.forEach(el => {
+              currentNode = currentNode.nodes[el];
+            })
+            currentNode.splice(index, 0, customToJSON(node));
+            break;
+          case "remove_node":
+            rest.forEach(el => {
+              currentNode = currentNode.nodes[el];
+            })
+            currentNode.splice(index, 1);
+            break;
+        }
+      })
+    }
+
     onChange1 = ({ operations, value }) => {
 
       var differences = diff(this.state.value.document, value.document);
@@ -177,35 +286,8 @@ class App extends React.Component {
         // Using the difference obtained from the Immutable diff library,
         // apply the operations to the Automerge document.
         const doc1b = Automerge.change(doc1, 'Editor1 change', doc => {
-          differences.forEach(op => {
-            var currentNode = doc.note;
-            var path = this.getPath(op);;
-            var nodesExceptLast = path.slice(0, -1);;
-            var lastNode = path.slice(-1);;
-            var data;
-
-            // Move pointer of currentNode to last possible reference before
-            // we do the insertion, replacement or deletion.
-            nodesExceptLast.forEach(el => {
-              currentNode = currentNode[el];
-            })
-
-            if (op.get("op") == "add") {
-              // Operation inserts an element into a list or map.
-              data = customToJSON(op.get("value"));
-              lastNode = !isNaN(lastNode) ? parseInt(lastNode) : lastNode;
-              currentNode.insertAt(lastNode, data);
-            }
-            if (op.get("op") == "replace") {
-              // Operation replaces an element in a list or map.
-              data = op.get("value");
-              currentNode[lastNode] = data;
-            }
-            if (op.get("op") == "remove") {
-              // Operation removes an element from a list or map.
-              currentNode.deleteAt(parseInt(lastNode));
-            }
-          })
+          // this.applyImmutableDiffOperations(doc, differences)
+          this.applySlateOperations(doc, operations)
         })
 
         // Update doc2 changes
@@ -291,8 +373,8 @@ class App extends React.Component {
       automergeOps.map(op => {
         if (op.action === "del") {
           let offset = op.key.slice(op.key.indexOf(':') + 1,)
-          let slatePath = this.state.pathMap[op.obj].match(/\d+/g).map(x => { 
-              return parseInt(x, 10); 
+          let slatePath = this.state.pathMap[op.obj].match(/\d+/g).map(x => {
+              return parseInt(x, 10);
           });
           offset = parseInt(offset, 10) - 1
 
@@ -305,7 +387,7 @@ class App extends React.Component {
           }
           slateOps.push(slateOp)
         }
-        
+
       })
       // TODO: Merge like operations for `remove_text` and `insert_text`
 
@@ -395,7 +477,7 @@ class App extends React.Component {
     buildObjectIdMap() {
       const snapshot = Automerge.getHistory(doc1)[0].snapshot.note
 
-      this.setState({pathMap: this.deepTraverse(snapshot, null, {}) }) 
+      this.setState({pathMap: this.deepTraverse(snapshot, null, {}) })
     }
 
     deepTraverse(obj, p, pathMap) {
@@ -437,8 +519,8 @@ class App extends React.Component {
 
       if (op.action === "del") {
         let offset = op.key.slice(op.key.indexOf(':') + 1,)
-        let slatePath = this.state.pathMap[op.obj].match(/\d+/g).map(x => { 
-            return parseInt(x, 10); 
+        let slatePath = this.state.pathMap[op.obj].match(/\d+/g).map(x => {
+            return parseInt(x, 10);
         });
         offset = parseInt(offset, 10) - 1
 
@@ -449,7 +531,7 @@ class App extends React.Component {
           text: '*',
           marks: []
         }
-        
+
         const change = this.state.value2.change()
         change.applyOperation(slateOp)
         this.setState({ value2: change.value })
