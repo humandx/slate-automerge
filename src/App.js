@@ -123,7 +123,8 @@ let testVal = []
 // doc2 = Automerge.merge(doc2, doc1)
 
 const allowedOperations = [
-  "insert_text", "remove_text", "insert_node", "split_node", "remove_node", "merge_node"
+  "insert_text", "remove_text", "insert_node", "split_node",
+  "remove_node", "merge_node", "set_node", "move_node"
 ];
 
 class App extends React.Component {
@@ -207,7 +208,7 @@ class App extends React.Component {
         if (allowedOperations.indexOf(op.type) == -1) {
           return;
         }
-        const {path, offset, text, marks, node, position} = op;
+        const {path, offset, text, marks, node, position, properties} = op;
         const index = path[path.length - 1];
         const rest = path.slice(0, -1)
         let currentNode = doc.note;
@@ -273,6 +274,17 @@ class App extends React.Component {
               currentNode = currentNode.nodes[el];
             })
             currentNode.splice(index, 1);
+            break;
+          case "set_node":
+            path.forEach(el => {
+              currentNode = currentNode.nodes[el];
+            })
+            for (let attrname in properties) {
+              currentNode[attrname] = properties[attrname];
+            }
+            break;
+          case "move_node":
+            console.error("NOT IMPLEMENTED YET")
             break;
         }
       })
