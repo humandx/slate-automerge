@@ -246,16 +246,19 @@ class App extends React.Component {
             // Currently ignore properties
             break;
           case "merge_node":
-            // THIS DOESN'T WORK, CONCAT does not work
             rest.forEach(el => {
               currentNode = currentNode.nodes[el];
             })
             let one = currentNode.nodes[index - 1];
             let two = currentNode.nodes[index];
             if (one.object == "text") {
-              one.characters.concat(two.characters);
+              two.characters.forEach(char => {
+                one.characters.push(char);
+              })
             } else {
-              one.nodes.concat(two.nodes);
+              two.nodes.forEach(char => {
+                one.nodes.push(char);
+              })
             }
             currentNode.nodes.splice(index, 0);
             break;
