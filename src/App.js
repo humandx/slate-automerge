@@ -208,7 +208,10 @@ class App extends React.Component {
         if (allowedOperations.indexOf(op.type) == -1) {
           return;
         }
-        const {path, offset, text, marks, node, position, properties} = op;
+        const {
+          path, offset, text, marks,
+          node, position, properties, newPath
+        } = op;
         const index = path[path.length - 1];
         const rest = path.slice(0, -1)
         let currentNode = doc.note;
@@ -284,7 +287,44 @@ class App extends React.Component {
             }
             break;
           case "move_node":
-            console.error("NOT IMPLEMENTED YET")
+            const newIndex = newPath[newPath.length - 1]
+            const newParentPath = newPath.slice(0, -1)
+            const oldParentPath = path.slice(0, -1)
+            const oldIndex = path[path.length - 1]
+
+            // Remove the old node from it's current parent.
+            oldParentPath.forEach(el => {
+              currentNode = currentNode.nodes[el];
+            })
+            let nodeToMove = currentNode.splice(oldIndex, 1);
+
+            // Find the new target...
+            if (
+              oldParentPath.every((x, i) => x === newParentPath[i]) &&
+              oldParentPath.length === newParentPath.length
+            ) {
+              // Do nothing
+            } else if (
+              oldParentPath.every((x, i) => x === newParentPath[i]) &&
+              oldIndex < newParentPath[oldParentPath.length]
+            ) {
+              // Otherwise, if the old path removal resulted in the new path being no longer
+              // correct, we need to decrement the new path at the old path's last index.
+              currentNode = doc.note;
+              newParentPath[oldParentPath.length]--
+              newParentPath.forEach(el => {
+                currentNode = currentNode.nodes[el];
+              })
+            } else {
+              // Otherwise, we can just grab the target normally...
+              currentNode = doc.note;
+              newParentPath.forEach(el => {
+                currentNode = currentNode.nodes[el];
+              })
+            }
+
+            // Insert the new node to its new parent.
+            currentNode.splice(newIndex, 0, nodeToMove);
             break;
         }
       })
