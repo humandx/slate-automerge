@@ -26,31 +26,39 @@ const initialValue = Value.fromJSON({
             ]
           }
         ]
+      },
+      {
+        object: 'block',
+        type: 'paragraph',
+        nodes: [
+          {
+            object: 'text',
+            leaves: [
+              {
+                text: 'Another line of text'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        object: 'block',
+        type: 'paragraph',
+        nodes: [
+          {
+            object: 'text',
+            leaves: [
+              {
+                text: 'Yet another line of text'
+              }
+            ]
+          }
+        ]
       }
     ]
   }
 })
 
-// const initialValue2 = Value.fromJSON({
-//   document: {
-//     nodes: [
-//       {
-//         object: 'block',
-//         type: 'paragraph',
-//         nodes: [
-//           {
-//             object: 'text',
-//             leaves: [
-//               {
-//                 text: 'A line of test in a aragraph..'
-//               }
-//             ]
-//           }
-//         ]
-//       }
-//     ]
-//   }
-// })
 const initialValue2 = Value.fromJSON({
   document: {
     nodes: [
@@ -68,20 +76,34 @@ const initialValue2 = Value.fromJSON({
           }
         ]
       },
-      // {
-      //   object: 'block',
-      //   type: 'paragraph',
-      //   nodes: [
-      //     {
-      //       object: 'text',
-      //       leaves: [
-      //         {
-      //           text: 'a'
-      //         }
-      //       ]
-      //     }
-      //   ]
-      // }
+      {
+        object: 'block',
+        type: 'paragraph',
+        nodes: [
+          {
+            object: 'text',
+            leaves: [
+              {
+                text: 'Another line of text'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        object: 'block',
+        type: 'paragraph',
+        nodes: [
+          {
+            object: 'text',
+            leaves: [
+              {
+                text: 'Yet another line of text'
+              }
+            ]
+          }
+        ]
+      }
     ]
   }
 })
@@ -136,17 +158,12 @@ class App extends React.Component {
       this.findChanges = this.findChanges.bind(this)
       this.immutablePatch = this.immutablePatch.bind(this)
       this.reflect = this.reflect.bind(this)
+      this.reflectDiff = this.reflectDiff.bind(this)
       this.removeNode = this.removeNode.bind(this)
-
-      this.doc1inc = this.doc1inc.bind(this)
-      this.doc1dec = this.doc1dec.bind(this)
-      this.doc2inc = this.doc2inc.bind(this)
-      this.doc2dec = this.doc2dec.bind(this)
-      this.historyCheck = this.historyCheck.bind(this)
 
       this.useChangeOps = this.useChangeOps.bind(this)
       this.buildObjectIdMap = this.buildObjectIdMap.bind(this)
-      this.mockAutomergeDelete = this.mockAutomergeDelete.bind(this)
+      this.mockAutomerge = this.mockAutomerge.bind(this)
     }
 
     componentDidMount = () => {
@@ -154,6 +171,9 @@ class App extends React.Component {
       doc1 = Automerge.change(doc1, 'Initialize Slate state', doc => {
         doc.note = customToJSON(this.state.value.document);
       })
+      ///
+      doc2 = Automerge.merge(doc2, doc1)
+      ///
       this.buildObjectIdMap()
     }
 
@@ -337,12 +357,13 @@ class App extends React.Component {
       this.setState({ value: value })
 
       if (differences.size > 0) {
+        console.log(operations)
 
         // Using the difference obtained from the Immutable diff library,
         // apply the operations to the Automerge document.
         const doc1b = Automerge.change(doc1, 'Editor1 change', doc => {
-          // this.applyImmutableDiffOperations(doc, differences)
-          this.applySlateOperations(doc, operations)
+          this.applyImmutableDiffOperations(doc, differences)
+          // this.applySlateOperations(doc, operations)
         })
 
         // Update doc2 changes
@@ -390,13 +411,6 @@ class App extends React.Component {
 
     findChanges() {
       console.log(Automerge.diff(doc2, doc1))
-      // const docVal = this.lastHistoryValue()
-
-      // const ops = slateDiff(this.state.value2, docVal)
-      // // console.log(ops)
-      // const change = this.state.value2.change()
-      // change.applyOperations(ops)
-      // this.setState({ value2: change.value })
     }
 
     immutablePatch() {
@@ -425,6 +439,10 @@ class App extends React.Component {
       const automergeOps = history[history.length - 1].change.ops
       const slateOps = []
 
+      // To build objects from Automerge operations
+      const objIdMap = {}
+      let insPos, path, insObjId;
+
       automergeOps.map(op => {
         if (op.action === "del") {
           let offset = op.key.slice(op.key.indexOf(':') + 1,)
@@ -442,13 +460,273 @@ class App extends React.Component {
           }
           slateOps.push(slateOp)
         }
+        
+        if (op.action === 'ins') {
+          if (op.key === '_head') {
+            insPos = 0
+          }
+          else {
+            insPos = op.key.slice(op.key.indexOf(':') + 1,)
+          }
+        }
+        if (op.action === "makeMap") {
+          objIdMap[op.obj] = {}
+        }
+        if (op.action === "makeList") {
+          objIdMap[op.obj] = []
+        }
+        if (op.action === "set") {
+          objIdMap[op.obj][op.key] = op.value
+        }
+        if (op.action === "link") {
+          if (op.key.indexOf(':') >= 0) {
+            const key = op.key.slice(0, op.key.indexOf(':'))
+            // FIXME: Do these first two `if` statements ever execute?
+            if (objIdMap.hasOwnProperty(key)) {
+              objIdMap[op.obj][key] = objIdMap[op.value]
+              console.log('key found in objIdMap, objIdMap: ', objIdMap)
+            }
+            else if (this.state.pathMap.hasOwnProperty(key)) {
+              path = this.state.pathMap[key]
+              console.log('key found in pathMap, path: ', path)
+            }
+            else {
+              path = this.state.pathMap[op.obj]
+              insObjId = op.value
 
+              // "Operation cycle" is completed when we link the `ins`.obj
+              let slatePath = path.match(/\d+/g).map(x => { 
+                return parseInt(x, 10); 
+              });
+              insPos = parseInt(insPos, 10)
+        
+              const slateOp = {
+                type: 'insert_text',
+                path: slatePath,
+                offset: insPos,
+                text: objIdMap[insObjId].text,
+                marks: objIdMap[insObjId].marks
+              }
+              slateOps.push(slateOp)
+            }
+          }
+          else {
+            objIdMap[op.obj][op.key] = objIdMap[op.value]
+          }
+        }
       })
+
       // TODO: Merge like operations for `remove_text` and `insert_text`
 
       const change = this.state.value2.change()
       change.applyOperations(slateOps)
       this.setState({ value2: change.value })
+
+      // Paths may have changed after applying operations - update objectId map
+      // In the future, this should only change those values that changed
+      this.buildObjectIdMap()
+    }
+
+    reflectDiff() {
+      const automergeOps = Automerge.diff(doc2, doc1)
+      const slateOps = []
+
+      // To build objects from Automerge operations
+      const objIdMap = {}
+
+      automergeOps.map(op => {
+        if (op.action === 'create') {
+          switch (op.type) {
+            case 'map':
+              objIdMap[op.obj] = {}
+              break;
+            case 'list':
+              objIdMap[op.obj] = []
+              break;
+            default:
+              console.error('`create`, unsupported type: ', op.type)
+          }
+        }
+
+        if (op.action === 'remove') {
+          let pathString, slatePath, slateOp
+
+          pathString = this.state.pathMap[op.obj].match(/\d+/g)
+          if (pathString) {
+            slatePath = pathString.map(x => {
+              return parseInt(x, 10);
+            });
+          }
+          else {
+            // FIXME: Is `op.index` always the right path? What happens in a
+            // sub-node (in other words, will `slatePath` ever need to have
+            // length > 1?
+            slatePath = [op.index]
+          }
+
+          // Validate the operation using the node type at path given by `op.obj`
+          // FIXME: Is the Slate's Value reliable enough to get the node type?
+          // Use the document to be changed
+          const removeNode = this.state.value2.document.getNodeAtPath(slatePath)
+          switch (removeNode.object) {
+            case 'text':
+              slateOp = {
+                type: 'remove_text',
+                path: slatePath,
+                offset: op.index,
+                text: '*',
+                marks: []
+              }
+              break;
+            case 'block':
+              slateOp = {
+                type: 'remove_node',
+                path: slatePath,
+                node: removeNode
+              }
+              break;
+            default:
+              console.error('`remove`, unsupported node type: ', removeNode.object)
+          }
+
+          slateOps.push(slateOp)
+        }
+
+        if (op.action === "set") {
+          if (op.hasOwnProperty('link')) {
+            // What's the point of the `link` field? All my experiments
+            // have `link` = true
+            if (op.link) {
+              // Check if linking to a newly created object or one that
+              // already exists in our Automerge document
+              if (objIdMap.hasOwnProperty(op.value)) {
+                objIdMap[op.obj][op.key] = objIdMap[op.value]
+              }
+              else if (this.state.pathMap.hasOwnProperty(op.value)) {
+                objIdMap[op.obj][op.key] = this.state.pathMap[op.value]
+              }
+              else {
+                // TODO: Does this ever happen?
+                console.error('`set`, unable to find objectId: ', op.value)
+              }
+            }
+          }
+          else {
+            objIdMap[op.obj][op.key] = op.value
+          }
+        }
+
+        if (op.action === 'insert') {
+          if (op.link) {
+            let insertInto
+            // Check if inserting into a newly created object or one that
+            // already exists in our Automerge document
+            if (objIdMap.hasOwnProperty(op.obj)) {
+              insertInto = objIdMap[op.obj]
+
+              // TODO: Can we assume that in this case, we are always
+              // inserting into a list?
+            }
+            else if (this.state.pathMap.hasOwnProperty(op.obj)) {
+              insertInto = this.state.pathMap[op.obj]
+
+              // TODO: Continuing from the previous TODO thought,
+              // can we assume that in this case, we are creating
+              // a Slate Operation? (ie. typeof `insertInto` === 'string')
+            }
+            else {
+              // TODO: Does this ever happen?
+              console.error('`insert`, unable to find objectId: ', op.obj)
+            }
+
+            // See TODOs above - perhaps can be absorbed in above logic branches
+            if (insertInto instanceof Array) {
+              insertInto[op.index] = objIdMap[op.value]
+            }
+            else if (typeof insertInto === 'string' || insertInto instanceof String) {
+              let pathString, slatePath
+              let slateOp
+
+              // If the `pathString` is available, then we are likely inserting text
+              // FIXME: Verify this
+              pathString = insertInto.match(/\d+/g)
+              if (pathString) {
+                slatePath = pathString.map(x => {
+                  return parseInt(x, 10);
+                });
+
+                slateOp = {
+                  type: 'insert_text',
+                  path: slatePath,
+                  offset: op.index,
+                  text: objIdMap[op.value].text,
+                  marks: objIdMap[op.value].marks
+                }
+              }
+              else {
+                // FIXME: Is `op.index` always the right path? What happens in a
+                // sub-node?
+                slatePath = [op.index]
+
+                // 5/27/18: `insert_node` can't seem to insert a node with pre-existing
+                // text, so we need to insert a node, then `insert_text` into that node
+
+                // Extract text from node to insert, then insert a "clean node", and
+                // re-insert text with `insert_text`
+                const insertNode = objIdMap[op.value]
+                const insertTextNodes = insertNode.nodes
+                
+                insertNode.nodes = [{
+                  object: 'text',
+                  characters: []
+                }]
+
+                slateOp = {
+                  type: 'insert_node',
+                  path: slatePath,
+                  node: insertNode
+                }
+                slateOps.push(slateOp)
+
+                // TODO: Convert the `Text` object properly into separate `insert_text`
+                // operations with proper marks
+                const nodeTextString = insertTextNodes.map(textNode => {
+                  return textNode.characters.map(character => {
+                    return character.text
+                  }).join('')
+                })
+                slateOp = {
+                  type: 'insert_text',
+                  // FIXME: Get the path properly from the previous `insert_node` operation
+                  path: [slatePath[0], slatePath[0]],
+                  offset: 0,
+                  text: nodeTextString.join(''),
+                  marks: []
+                }
+              }
+
+              slateOps.push(slateOp)
+            }
+          }
+          else {
+            // TODO: Does this ever happen?
+            console.log('op.action is `insert`, but link is false')
+          }
+        }
+      })
+
+      console.log('slateOps: ', slateOps)
+      const change = this.state.value2.change()
+      change.applyOperations(slateOps)
+      this.setState({ value2: change.value })
+
+      // Update the Automerge document as well
+      // TODO: only apply `diff` changes
+      doc2 = Automerge.merge(doc2, doc1)
+
+      // Paths may have changed after applying operations - update objectId map
+      // TODO: only change those values that changed
+      this.buildObjectIdMap()
     }
 
     removeNode() {
@@ -479,39 +757,6 @@ class App extends React.Component {
       return { path, offset }
     }
 
-    /////////////////////////////
-    doc1inc() {
-      string = string + '!'
-      testVal.push('doc1')
-      doc1 = Automerge.change(doc1, 'doc1inc', doc => {
-        doc.value = { x : string, y : testVal }
-      })
-    }
-    doc1dec() {
-      string = string.substring(0, string.length - 1)
-      if (testVal.length > 1) { testVal.pop() }
-      doc1 = Automerge.change(doc1, 'doc1dec', doc => {
-        doc.value = { x : string, y : testVal }
-      })
-    }
-    doc2inc() {
-      string = string + '?'
-      doc2 = Automerge.change(doc2, 'doc2inc', doc => {
-        doc.value = { x : string, y : testVal }
-      })
-    }
-    doc2dec() {
-      string = string.substring(1, string.length)
-      doc2 = Automerge.change(doc2, 'doc2dec', doc => {
-        doc.value = { x : string, y : testVal }
-      })
-    }
-    historyCheck() {
-      let history = Automerge.getHistory(doc1)
-      console.log(Automerge.diff(history[history.length - 2].snapshot, doc1))
-    }
-    /////////////////////////////
-
     useChangeOps() {
       const firstObjOps = Automerge.getHistory(doc1)[0].change.ops
 
@@ -530,7 +775,8 @@ class App extends React.Component {
     }
 
     buildObjectIdMap() {
-      const snapshot = Automerge.getHistory(doc1)[0].snapshot.note
+      const history = Automerge.getHistory(doc1)
+      const snapshot = history[history.length - 1].snapshot.note
 
       this.setState({pathMap: this.deepTraverse(snapshot, null, {}) })
     }
@@ -568,29 +814,29 @@ class App extends React.Component {
       return pathMap
     }
 
-    mockAutomergeDelete() {
-      const history = Automerge.getHistory(doc1)
-      const op = history[history.length - 1].change.ops[0]
-
-      if (op.action === "del") {
-        let offset = op.key.slice(op.key.indexOf(':') + 1,)
-        let slatePath = this.state.pathMap[op.obj].match(/\d+/g).map(x => {
-            return parseInt(x, 10);
-        });
-        offset = parseInt(offset, 10) - 1
-
-        const slateOp = {
-          type: 'remove_text',
-          path: slatePath,
-          offset: offset,
-          text: '*',
-          marks: []
-        }
-
-        const change = this.state.value2.change()
-        change.applyOperation(slateOp)
-        this.setState({ value2: change.value })
+    mockAutomerge() {
+      const slateOps = []
+      let slateOp = {
+        type: 'split_node',
+        path: [0, 0],
+        position: 30,
+        target: null,
+        properties: { type: undefined }
       }
+      slateOps.push(slateOp)
+
+      slateOp = {
+        type: 'split_node',
+        path: [0],
+        position: 1,
+        target: 30,
+        properties: { type: 'paragraph' }
+      }
+      slateOps.push(slateOp)
+
+      const change = this.state.value2.change()
+      change.applyOperations(slateOps)
+      this.setState({ value2: change.value })
     }
 
     /////////////////////////////
@@ -622,17 +868,12 @@ class App extends React.Component {
             <button onClick={this.removeNode}>Remove Node</button>
             <button onClick={this.immutablePatch}>Traverse Diff</button>
             <button onClick={this.reflect}>Reflect Test</button>
-            <hr></hr>
-            <button onClick={this.doc1inc}>Doc1 x+1</button>
-            <button onClick={this.doc1dec}>Doc1 x-1</button>
-            <button onClick={this.doc2inc}>Doc2 x+1</button>
-            <button onClick={this.doc2dec}>Doc2 x-1</button>
-            <button onClick={this.historyCheck}>History Check</button>
+            <button onClick={this.reflectDiff}>Reflect Diff</button>
             <hr></hr>
             <button onClick={this.useChangeOps}>Use Change Ops</button>
             <button onClick={this.buildObjectIdMap}>Deep Traverse</button>
             <button onClick={() => {console.log(this.state.pathMap)}}>Log Path Map</button>
-            <button onClick={this.mockAutomergeDelete}>Mock Automerege Delete</button>
+            <button onClick={this.mockAutomerge}>Mock Automerge to Slate</button>
             {/* <button onClick={() => {console.log(diff(this.state.value.document, this.state.value2.document))}}>ImmutableDiff</button>
             <button onClick={() => {console.log(diff(this.state.value2.document, this.state.value.document))}}>Diff2to1</button>
             <button onClick={() => {console.log(Value.fromJSON(rtv).toJSON())}}>Doc3 JSON</button>
