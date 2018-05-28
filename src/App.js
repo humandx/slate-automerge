@@ -751,8 +751,8 @@ class App extends React.Component {
                 })
                 slateOp = {
                   type: 'insert_text',
-                  // FIXME: Get the path properly from the previous `insert_node` operation
-                  path: [slatePath[0], slatePath[0]],
+                  // Insert the text in the first node of the newly created node
+                  path: [slatePath[0], 0],
                   offset: 0,
                   text: nodeTextString.join(''),
                   marks: []
@@ -769,6 +769,7 @@ class App extends React.Component {
         }
       })
 
+      console.log('objIdMap: ', objIdMap)
       console.log('slateOps: ', slateOps)
       const change = this.state.value2.change()
       change.applyOperations(slateOps)
