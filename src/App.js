@@ -108,13 +108,6 @@ const initialValue2 = Value.fromJSON({
   }
 })
 
-const SUPPORTED_SLATE_OPS = [
-  'insert_text',
-  'remove_text',
-  'insert_node',
-  'remove_node'
-]
-
 const SUPPORTED_SLATE_SET_OBJECTS = [
   'document',
   'block',
@@ -131,18 +124,6 @@ const SUPPORTED_SLATE_PATH_OBJECTS = [
 // let doc2 = Automerge.initImmutable();
 let doc1 = Automerge.init();
 let doc2 = Automerge.init();
-let string = 'this is string'
-let testVal = []
-
-// doc1 = Automerge.change(doc1, 'Initialize Slate state', doc => {
-//   doc.value = { x : string, y : testVal }
-// })
-// doc2 = Automerge.merge(doc2, doc1)
-
-// doc1 = Automerge.change(doc1, 'Initialize Slate state', doc => {
-//   doc.ops = []
-// })
-// doc2 = Automerge.merge(doc2, doc1)
 
 const allowedOperations = [
   "insert_text", "remove_text", "insert_node", "split_node",
@@ -411,7 +392,6 @@ class App extends React.Component {
       this.setState({ value: value })
 
       if (differences.size > 0) {
-        console.log(operations)
 
         // Using the difference obtained from the Immutable diff library,
         // apply the operations to the Automerge document.
@@ -581,12 +561,19 @@ class App extends React.Component {
       this.buildObjectIdMap()
     }
 
+    // FIXME: Unexpected behavior for the following scenarios:
+    //   Merge nodes and immediately insert text
+    //     Expected: Proper merge and text insert
+    //     Actual: Inserted text overwrites some chars in merged node
+    //     Probably because merge node is equal to delete entire nodes
+    //     and re-insert with new text
     reflectDiff() {
       const automergeOps = Automerge.diff(doc2, doc1)
       const slateOps = []
 
       // To build objects from Automerge operations
       const objIdMap = {}
+      const deferredOps = []
 
       automergeOps.map(op => {
         if (op.action === 'create') {
@@ -672,94 +659,17 @@ class App extends React.Component {
 
         if (op.action === 'insert') {
           if (op.link) {
-            let insertInto
             // Check if inserting into a newly created object or one that
             // already exists in our Automerge document
             if (objIdMap.hasOwnProperty(op.obj)) {
-              insertInto = objIdMap[op.obj]
-
-              // TODO: Can we assume that in this case, we are always
-              // inserting into a list?
+              objIdMap[op.obj][op.index] = objIdMap[op.value]
             }
             else if (this.state.pathMap.hasOwnProperty(op.obj)) {
-              insertInto = this.state.pathMap[op.obj]
-
-              // TODO: Continuing from the previous TODO thought,
-              // can we assume that in this case, we are creating
-              // a Slate Operation? (ie. typeof `insertInto` === 'string')
+              deferredOps.push(op)
             }
             else {
               // TODO: Does this ever happen?
               console.error('`insert`, unable to find objectId: ', op.obj)
-            }
-
-            // See TODOs above - perhaps can be absorbed in above logic branches
-            if (insertInto instanceof Array) {
-              insertInto[op.index] = objIdMap[op.value]
-            }
-            else if (typeof insertInto === 'string' || insertInto instanceof String) {
-              let pathString, slatePath
-              let slateOp
-
-              // If the `pathString` is available, then we are likely inserting text
-              // FIXME: Verify this
-              pathString = insertInto.match(/\d+/g)
-              if (pathString) {
-                slatePath = pathString.map(x => {
-                  return parseInt(x, 10);
-                });
-
-                slateOp = {
-                  type: 'insert_text',
-                  path: slatePath,
-                  offset: op.index,
-                  text: objIdMap[op.value].text,
-                  marks: objIdMap[op.value].marks
-                }
-              }
-              else {
-                // FIXME: Is `op.index` always the right path? What happens in a
-                // sub-node?
-                slatePath = [op.index]
-
-                // 5/27/18: `insert_node` can't seem to insert a node with pre-existing
-                // text, so we need to insert a node, then `insert_text` into that node
-
-                // Extract text from node to insert, then insert a "clean node", and
-                // re-insert text with `insert_text`
-                const insertNode = objIdMap[op.value]
-                const insertTextNodes = insertNode.nodes
-                
-                insertNode.nodes = [{
-                  object: 'text',
-                  characters: []
-                }]
-
-                slateOp = {
-                  type: 'insert_node',
-                  path: slatePath,
-                  node: insertNode
-                }
-                slateOps.push(slateOp)
-
-                // TODO: Convert the `Text` object properly into separate `insert_text`
-                // operations with proper marks
-                const nodeTextString = insertTextNodes.map(textNode => {
-                  return textNode.characters.map(character => {
-                    return character.text
-                  }).join('')
-                })
-                slateOp = {
-                  type: 'insert_text',
-                  // Insert the text in the first node of the newly created node
-                  path: [slatePath[0], 0],
-                  offset: 0,
-                  text: nodeTextString.join(''),
-                  marks: []
-                }
-              }
-
-              slateOps.push(slateOp)
             }
           }
           else {
@@ -769,7 +679,78 @@ class App extends React.Component {
         }
       })
 
-      console.log('objIdMap: ', objIdMap)
+      // We know all ops in this list have the following conditions true:
+      //  - op.action === `insert`
+      //  - this.state.pathMap.hasOwnProperty(op.obj)
+      //  - typeof this.state.pathMap[op.obj] === 'string' ||
+      //    this.state.pathMap[op.obj] instanceof String
+      deferredOps.map(op => {
+        const insertInto = this.state.pathMap[op.obj]
+
+        let pathString, slatePath
+        let slateOp
+
+        // If the `pathString` is available, then we are likely inserting text
+        // FIXME: Verify this
+        pathString = insertInto.match(/\d+/g)
+        if (pathString) {
+          slatePath = pathString.map(x => {
+            return parseInt(x, 10);
+          });
+
+          slateOp = {
+            type: 'insert_text',
+            path: slatePath,
+            offset: op.index,
+            text: objIdMap[op.value].text,
+            marks: objIdMap[op.value].marks
+          }
+        }
+        else {
+          // FIXME: Is `op.index` always the right path? What happens in a
+          // sub-node?
+          slatePath = [op.index]
+
+          // 5/27/18: `insert_node` can't seem to insert a node with pre-existing
+          // text, so we need to insert a node, then `insert_text` into that node
+
+          // Extract text from node to insert, then insert a "clean node", and
+          // re-insert text with `insert_text`
+          const insertNode = objIdMap[op.value]
+          const insertTextNodes = insertNode.nodes
+          
+          insertNode.nodes = [{
+            object: 'text',
+            characters: []
+          }]
+
+          slateOp = {
+            type: 'insert_node',
+            path: slatePath,
+            node: insertNode
+          }
+          slateOps.push(slateOp)
+
+          // TODO: Convert the `Text` object properly into separate `insert_text`
+          // operations with proper marks
+          const nodeTextString = insertTextNodes.map(textNode => {
+            return textNode.characters.map(character => {
+              return character.text
+            }).join('')
+          })
+          slateOp = {
+            type: 'insert_text',
+            // Insert the text in the first node of the newly created node
+            path: [slatePath[0], 0],
+            offset: 0,
+            text: nodeTextString.join(''),
+            marks: []
+          }
+        }
+
+        slateOps.push(slateOp)
+      })
+
       console.log('slateOps: ', slateOps)
       const change = this.state.value2.change()
       change.applyOperations(slateOps)
