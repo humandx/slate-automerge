@@ -142,6 +142,7 @@ class App extends React.Component {
       this.reflectDiff = this.reflectDiff.bind(this)
       this.removeNode = this.removeNode.bind(this)
 
+      this.convertAutomergeToSlateOps = this.convertAutomergeToSlateOps.bind(this)
       this.useChangeOps = this.useChangeOps.bind(this)
       this.buildObjectIdMap = this.buildObjectIdMap.bind(this)
       this.mockAutomerge = this.mockAutomerge.bind(this)
@@ -173,7 +174,7 @@ class App extends React.Component {
     }
 
     applyImmutableDiffOperations = (doc, differences) => {
-        differences.forEach(op => {
+      differences.forEach(op => {
         var currentNode = doc.note;
         var path = this.getPath(op);;
         var nodesExceptLast = path.slice(0, -1);;
@@ -401,35 +402,39 @@ class App extends React.Component {
         })
 
         // Update doc2 changes
-        // const changes = Automerge.getChanges(doc1, doc1b)
-        // console.log(changes)
+        const opSetDiff = Automerge.diff(doc1, doc1b)
+        const changes = Automerge.getChanges(doc1, doc1b)
+        console.log(changes)
         // doc2 = Automerge.applyChanges(doc2, changes)
 
         // Update doc1
         doc1 = doc1b
+        this.reflectDiffFromOneToTwo(opSetDiff, changes);
       }
     }
 
     onChange2 = ({ operations, value }) => {
+
+      var differences = diff(this.state.value2.document, value.document);
+
       this.setState({ value2: value })
 
-      if (operations.size > 1) {
+      if (differences.size > 0) {
         const doc2b = Automerge.change(doc2, 'Editor2 change', doc => {
-          doc.note = customToJSON(value)
+          this.applyImmutableDiffOperations(doc, differences)
+          // doc.note = customToJSON(value)
           // doc.note = value
         })
 
         // Update doc1 changes
-        // const changes = Automerge.getChanges(doc2, doc2b)
-        // doc2 = Automerge.applyChanges(doc2, changes)
-        // console.log("After: ", doc2)
+        const opSetDiff = Automerge.diff(doc1, doc2b)
+        const changes = Automerge.getChanges(doc1, doc2b)
+        console.log(changes)
         // doc1 = Automerge.applyChanges(doc1, changes)
-
-        // const merged = Automerge.merge(doc1, doc2)
-        // console.log("doc1 merged: ", merged)
 
         // Update doc2
         doc2 = doc2b
+        this.reflectDiffFromTwoToOne(opSetDiff, changes);
       }
     }
 
@@ -494,7 +499,7 @@ class App extends React.Component {
           }
           slateOps.push(slateOp)
         }
-        
+
         if (op.action === 'ins') {
           if (op.key === '_head') {
             insPos = 0
@@ -529,11 +534,11 @@ class App extends React.Component {
               insObjId = op.value
 
               // "Operation cycle" is completed when we link the `ins`.obj
-              let slatePath = path.match(/\d+/g).map(x => { 
-                return parseInt(x, 10); 
+              let slatePath = path.match(/\d+/g).map(x => {
+                return parseInt(x, 10);
               });
               insPos = parseInt(insPos, 10)
-        
+
               const slateOp = {
                 type: 'insert_text',
                 path: slatePath,
@@ -569,9 +574,61 @@ class App extends React.Component {
     //     and re-insert with new text
     reflectDiff() {
       const automergeOps = Automerge.diff(doc2, doc1)
-      const slateOps = []
 
+      const slateOps = this.convertAutomergeToSlateOps(automergeOps)
+
+      console.log('slateOps: ', slateOps)
+      const change = this.state.value2.change()
+      change.applyOperations(slateOps)
+      this.setState({ value2: change.value })
+
+      // Update the Automerge document as well
+      // TODO: only apply `diff` changes
+      // doc2 = Automerge.applyChanges(doc2, automergeOps)
+      doc2 = Automerge.merge(doc2, doc1)
+
+      // Paths may have changed after applying operations - update objectId map
+      // TODO: only change those values that changed
+      this.buildObjectIdMap()
+    }
+
+    reflectDiffFromOneToTwo(opSetDiff, changes) {
+
+      const slateOps = this.convertAutomergeToSlateOps(opSetDiff)
+
+      console.log('slateOps: ', slateOps)
+      const change = this.state.value2.change()
+      change.applyOperations(slateOps)
+      this.setState({ value2: change.value })
+
+      // Update the Automerge document as well
+      doc2 = Automerge.applyChanges(doc2, changes)
+
+      // Paths may have changed after applying operations - update objectId map
+      // TODO: only change those values that changed
+      this.buildObjectIdMap()
+    }
+
+    reflectDiffFromTwoToOne(opSetDiff, changes) {
+
+      const slateOps = this.convertAutomergeToSlateOps(opSetDiff)
+
+      console.log('slateOps: ', slateOps)
+      const change = this.state.value.change()
+      change.applyOperations(slateOps)
+      this.setState({ value: change.value })
+
+      // Update the Automerge document as well
+      doc1 = Automerge.applyChanges(doc1, changes)
+
+      // Paths may have changed after applying operations - update objectId map
+      // TODO: only change those values that changed
+      this.buildObjectIdMap()
+    }
+
+    convertAutomergeToSlateOps(automergeOps) {
       // To build objects from Automerge operations
+      const slateOps = []
       const objIdMap = {}
       const deferredOps = []
 
@@ -718,7 +775,7 @@ class App extends React.Component {
           // re-insert text with `insert_text`
           const insertNode = objIdMap[op.value]
           const insertTextNodes = insertNode.nodes
-          
+
           insertNode.nodes = [{
             object: 'text',
             characters: []
@@ -750,19 +807,7 @@ class App extends React.Component {
 
         slateOps.push(slateOp)
       })
-
-      console.log('slateOps: ', slateOps)
-      const change = this.state.value2.change()
-      change.applyOperations(slateOps)
-      this.setState({ value2: change.value })
-
-      // Update the Automerge document as well
-      // TODO: only apply `diff` changes
-      doc2 = Automerge.merge(doc2, doc1)
-
-      // Paths may have changed after applying operations - update objectId map
-      // TODO: only change those values that changed
-      this.buildObjectIdMap()
+      return slateOps;
     }
 
     removeNode() {
