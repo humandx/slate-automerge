@@ -26,7 +26,7 @@ const initialValue = {
             object: 'text',
             leaves: [
               {
-                text: 'A line of text in a paragraph.'
+                text: '111111'
               }
             ]
           }
@@ -40,26 +40,12 @@ const initialValue = {
             object: 'text',
             leaves: [
               {
-                text: 'Another line of text'
+                text: '222222'
               }
             ]
           }
         ]
       },
-      {
-        object: 'block',
-        type: 'paragraph',
-        nodes: [
-          {
-            object: 'text',
-            leaves: [
-              {
-                text: 'Yet another line of text'
-              }
-            ]
-          }
-        ]
-      }
     ]
   }
 };
@@ -82,53 +68,10 @@ class App extends React.Component {
       this.client = [];
 
       this.state = {
-        online: true,
+        online: false,
       }
-
-      // this.reflectDiff = this.reflectDiff.bind(this)
-      // this.reflectDiff2 = this.reflectDiff2.bind(this)
     }
 
-    // FIXME: Unexpected behavior for the following scenarios:
-    //   Merge nodes and immediately insert text
-    //     Expected: Proper merge and text insert
-    //     Actual: Inserted text overwrites some chars in merged node
-    //     Probably because merge node is equal to delete entire nodes
-    //     and re-insert with new text
-
-    // reflectDiff = () => {
-    //   let changesTotal1 = [];
-    //   this.state.doc1OfflineHistory.forEach((changes) => {
-    //     changesTotal1 = changesTotal1.concat(changes)
-    //   })
-
-    //   this.applyDiffToDoc2(changesTotal1);
-
-    //   let changesTotal2 = [];
-    //   this.state.doc2OfflineHistory.forEach((changes) => {
-    //     changesTotal2 = changesTotal2.concat(changes)
-    //   })
-
-    //   this.applyDiffToDoc1(changesTotal2);
-
-    //   this.setState({
-    //     doc1OfflineHistory: Immutable.List(),
-    //     doc2OfflineHistory: Immutable.List(),
-    //   })
-    // }
-
-    // reflectDiff2 = () => {
-    //   const doc1new = Automerge.merge(doc1, doc2)
-    //   const doc2new = Automerge.merge(doc2, doc1new)
-
-    //   const changes1 = Automerge.getChanges(doc1, doc1new)
-    //   const changes2 = Automerge.getChanges(doc2, doc2new)
-
-    //   this.applyDiffToDoc1(changes1)
-    //   this.applyDiffToDoc2(changes2)
-    // }
-
-    /////////////////////////////
     offlineSync = () => {
       let docs = [];
       this.client.forEach((client, idx) => {

@@ -68,6 +68,7 @@ export class Client extends React.Component {
       this.doc = docNew;
 
       this.updateWithAutomergeOperations(opSetDiff);
+      this.syncSlateAndAutomerge();
     }
 
     updateWithNewAutomergeDoc = ( automergeDoc ) => {
@@ -131,6 +132,14 @@ export class Client extends React.Component {
       const snapshot = history[history.length - 1].snapshot.note
 
       this.setState({pathMap: deepTraverse(snapshot, null, {}) })
+    }
+
+    syncSlateAndAutomerge = () => {
+
+      // const slateValue = automergeJsontoSlate({
+      //   "document": {...this.doc.note}
+      // })
+      // this.setState({value: Value.fromJSON(slateValue)});
     }
 
     render = () => {
