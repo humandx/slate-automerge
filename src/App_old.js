@@ -134,13 +134,19 @@ class App extends React.Component {
     constructor(props) {
       super(props)
 
+      this.lastHistoryValue = this.lastHistoryValue.bind(this)
+      this.findChanges = this.findChanges.bind(this)
+      this.immutablePatch = this.immutablePatch.bind(this)
+      this.reflect = this.reflect.bind(this)
       this.reflectDiff = this.reflectDiff.bind(this)
-      this.reflectDiff2 = this.reflectDiff2.bind(this)
+      this.removeNode = this.removeNode.bind(this)
 
       this.onChange1 = this.onChange1.bind(this)
       this.onChange2 = this.onChange2.bind(this)
 
+      this.useChangeOps = this.useChangeOps.bind(this)
       this.buildObjectIdMap = this.buildObjectIdMap.bind(this)
+      this.mockAutomerge = this.mockAutomerge.bind(this)
 
       this.state = {
         value: initialValue,
@@ -224,6 +230,142 @@ class App extends React.Component {
       }
     }
 
+    toggleOnline = () => {
+      this.setState({online: true});
+    }
+
+    toggleOffline = () => {
+      this.setState({online: false});
+    }
+
+    lastHistoryValue = () => {
+      const history = Automerge.getHistory(doc2)
+      const lastObj = history[history.length - 1]
+      const lastObjJSON = JSON.stringify(lastObj.snapshot.note)
+      const docVal = Value.fromJSON(JSON.parse(lastObjJSON))
+      console.log(docVal)
+
+      return docVal
+    }
+
+    findChanges = () => {
+      console.log(Automerge.diff(doc2, doc1))
+    }
+
+    immutablePatch = () => {
+      var differences = diff(this.state.value.document, this.state.value2.document)
+
+      differences.forEach((key) => {
+        if (key.get('path').indexOf('key') > -1) { return }
+        console.log("Key: ", key)
+        console.log("op: ", key.get('op'))
+        console.log("path: ", key.get('path'))
+        const val = key.get('value')
+        console.log("value: ", val)
+        if (val) {
+          console.log("value.object: ", val.object)
+          if (val.object === 'block') {
+            const valJSON = customToJSON(val)
+            console.log('blockJSON: ', valJSON)
+            console.log('blockSlate: ', Block.fromJSON(valJSON))
+          }
+        }
+      })
+    }
+
+    reflect = () => {
+      const history = Automerge.getHistory(doc1)
+      const automergeOps = history[history.length - 1].change.ops
+      const slateOps = []
+
+      // To build objects from Automerge operations
+      const objIdMap = {}
+      let insPos, path, insObjId;
+
+      automergeOps.map(op => {
+        if (op.action === "del") {
+          let offset = op.key.slice(op.key.indexOf(':') + 1,)
+          let slatePath = this.state.pathMap[op.obj].match(/\d+/g).map(x => {
+              return parseInt(x, 10);
+          });
+          offset = parseInt(offset, 10) - 1
+
+          const slateOp = {
+            type: 'remove_text',
+            path: slatePath,
+            offset: offset,
+            text: '*',
+            marks: []
+          }
+          slateOps.push(slateOp)
+        }
+
+        if (op.action === 'ins') {
+          if (op.key === '_head') {
+            insPos = 0
+          }
+          else {
+            insPos = op.key.slice(op.key.indexOf(':') + 1,)
+          }
+        }
+        if (op.action === "makeMap") {
+          objIdMap[op.obj] = {}
+        }
+        if (op.action === "makeList") {
+          objIdMap[op.obj] = []
+        }
+        if (op.action === "set") {
+          objIdMap[op.obj][op.key] = op.value
+        }
+        if (op.action === "link") {
+          if (op.key.indexOf(':') >= 0) {
+            const key = op.key.slice(0, op.key.indexOf(':'))
+            // FIXME: Do these first two `if` statements ever execute?
+            if (objIdMap.hasOwnProperty(key)) {
+              objIdMap[op.obj][key] = objIdMap[op.value]
+              console.log('key found in objIdMap, objIdMap: ', objIdMap)
+            }
+            else if (this.state.pathMap.hasOwnProperty(key)) {
+              path = this.state.pathMap[key]
+              console.log('key found in pathMap, path: ', path)
+            }
+            else {
+              path = this.state.pathMap[op.obj]
+              insObjId = op.value
+
+              // "Operation cycle" is completed when we link the `ins`.obj
+              let slatePath = path.match(/\d+/g).map(x => {
+                return parseInt(x, 10);
+              });
+              insPos = parseInt(insPos, 10)
+
+              const slateOp = {
+                type: 'insert_text',
+                path: slatePath,
+                offset: insPos,
+                text: objIdMap[insObjId].text,
+                marks: objIdMap[insObjId].marks
+              }
+              slateOps.push(slateOp)
+            }
+          }
+          else {
+            objIdMap[op.obj][op.key] = objIdMap[op.value]
+          }
+        }
+      })
+
+      // TODO: Merge like operations for `remove_text` and `insert_text`
+
+      const change = this.state.value2.change()
+      change.applyOperations(slateOps)
+      this.setState({ value2: change.value })
+
+      // Paths may have changed after applying operations - update objectId map
+      // In the future, this should only change those values that changed
+      this.buildObjectIdMap()
+    }
+
     // FIXME: Unexpected behavior for the following scenarios:
     //   Merge nodes and immediately insert text
     //     Expected: Proper merge and text insert
@@ -302,6 +444,51 @@ class App extends React.Component {
       this.buildObjectIdMap()
     }
 
+    removeNode = () => {
+      const rm = {
+        type: 'remove_node',
+        path: [1],
+        node: this.state.value.document.nodes.get(1)
+      }
+
+      const change = this.state.value.change()
+      change.applyOperation(rm)
+      this.setState({ value: change.value })
+    }
+
+    pathConv = (pathStr) => {
+      const result = pathStr.match(/\d+/g).map(v => {
+        return parseInt(v, 10)
+      })
+      let path = result.slice(0, result.length-1)
+      const offset = result[result.length-1]
+
+      // Handle single node path
+      if (path.length === 0) { path = [ offset ] }
+
+      // console.log('path: ', path)
+      // console.log('offset: ', offset)
+
+      return { path, offset }
+    }
+
+    useChangeOps = () => {
+      const firstObjOps = Automerge.getHistory(doc1)[0].change.ops
+
+      firstObjOps.map(op => {
+        if (op.action === 'set') {
+          if (SUPPORTED_SLATE_SET_OBJECTS.includes(op.value)) {
+            console.log(op)
+          }
+        }
+        else if (op.action === 'link') {
+          if (SUPPORTED_SLATE_PATH_OBJECTS.includes(op.key)) {
+            console.log(op)
+          }
+        }
+      })
+    }
+
     buildObjectIdMap = () => {
       const history = Automerge.getHistory(doc1)
       const snapshot = history[history.length - 1].snapshot.note
@@ -342,26 +529,36 @@ class App extends React.Component {
       return pathMap
     }
 
-    /////////////////////////////
-    toggleOnline = () => {
-      this.setState({online: !this.state.online});
+    mockAutomerge = () => {
+      const slateOps = []
+      let slateOp = {
+        type: 'split_node',
+        path: [0, 0],
+        position: 30,
+        target: null,
+        properties: { type: undefined }
+      }
+      slateOps.push(slateOp)
+
+      slateOp = {
+        type: 'split_node',
+        path: [0],
+        position: 1,
+        target: 30,
+        properties: { type: 'paragraph' }
+      }
+      slateOps.push(slateOp)
+
+      const change = this.state.value2.change()
+      change.applyOperations(slateOps)
+      this.setState({ value2: change.value })
     }
 
-    render = () => {
-        let onlineText;
-        let toggleButtonText;
-        if (this.state.online) {
-          onlineText = "CURRENTLY LIVE SYNCING"
-          toggleButtonText = "Toggle offline mode"
-        } else {
-          onlineText = "CURRENTLY OFFLINE"
-          toggleButtonText = "Toggle online mode"
-        }
+    /////////////////////////////
 
+    render = () => {
         return (
           <div>
-            <div>{onlineText}</div>
-            <hr></hr>
             <Editor
                 value={this.state.value}
                 onChange={this.onChange1}
@@ -372,10 +569,36 @@ class App extends React.Component {
                 onChange={this.onChange2}
             />
             <hr></hr>
-            <button onClick={this.toggleOnline}>{toggleButtonText}</button>
-            {!this.state.online &&
-              <button onClick={this.reflectDiff2}>Sync off-line mode</button>
-            }
+            <button onClick={() => {console.log(slateDiff(this.state.value, this.state.value2))}}>Slate-Diff</button>
+            <button onClick={() => {console.log(Automerge.getHistory(doc1))}}>Editor1 Automerge History</button>
+            <button onClick={() => {console.log(Automerge.getHistory(doc2))}}>Editor2 Automerge History</button>
+            <button onClick={this.lastHistoryValue}>Editor2 Last History Value JSON</button>
+            <button onClick={() => {console.log(customToJSON(this.state.value2))}}>Editor2 JSON</button>
+            <button onClick={this.findChanges}>Get Changes</button>
+            <hr></hr>
+            <button onClick={() => {console.log(this.state.value)}}>Value1 Slate</button>
+            <button onClick={() => {console.log(this.state.value2)}}>Value2 Slate</button>
+            <button onClick={() => {console.log(customToJSON(this.state.value))}}>Val1 JSON</button>
+            <button onClick={() => {console.log(customToJSON(this.state.value2))}}>Val2 JSON</button>
+            <button onClick={this.removeNode}>Remove Node</button>
+            <button onClick={this.immutablePatch}>Traverse Diff</button>
+            <button onClick={this.reflect}>Reflect Test</button>
+            <button onClick={this.reflectDiff}>Reflect Diff</button>
+            <hr></hr>
+            <button onClick={this.useChangeOps}>Use Change Ops</button>
+            <button onClick={this.buildObjectIdMap}>Deep Traverse</button>
+            <button onClick={() => {console.log(this.state.pathMap)}}>Log Path Map</button>
+            <button onClick={this.mockAutomerge}>Mock Automerge to Slate</button>
+            <hr></hr>
+            <button onClick={this.toggleOnline}>Toggle online mode</button>
+            <button onClick={this.toggleOffline}>Toggle off-line mode</button>
+            <button onClick={this.reflectDiff2}>Sync off-line mode</button>
+            {/* <button onClick={() => {console.log(diff(this.state.value.document, this.state.value2.document))}}>ImmutableDiff</button>
+            <button onClick={() => {console.log(diff(this.state.value2.document, this.state.value.document))}}>Diff2to1</button>
+            <button onClick={() => {console.log(Value.fromJSON(rtv).toJSON())}}>Doc3 JSON</button>
+            <button onClick={() => {console.log(this.state.value.toJSON())}}>Doc JSON</button>
+            <button onClick={this.immutablePatch}>Traverse Diff</button>
+            <button onClick={this.reflect}>Reflect Test</button> */}
           </div>
         )
     }
