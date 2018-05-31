@@ -2,7 +2,9 @@ import React from 'react'
 import { Editor } from 'slate-react'
 import { Value, Block } from 'slate'
 import diff from './intelie_diff/diff'
-import customToJSON from "./customToJson"
+import customToJSON from "./utils/customToJson"
+import { applyImmutableDiffOperations } from "./utils/immutableDiffToAutomerge"
+import { applySlateOperations } from "./utils/slateOpsToAutomerge"
 import slateDiff from 'slate-diff'
 import Automerge from 'automerge'
 
@@ -125,11 +127,6 @@ const SUPPORTED_SLATE_PATH_OBJECTS = [
 let doc1 = Automerge.init();
 let doc2 = Automerge.init();
 
-const allowedOperations = [
-  "insert_text", "remove_text", "insert_node", "split_node",
-  "remove_node", "merge_node", "set_node", "move_node"
-];
-
 class App extends React.Component {
 
     constructor(props) {
@@ -165,227 +162,6 @@ class App extends React.Component {
       pathMap: {}
     }
 
-    getPath = (op) => {
-      // if (op.get("path").indexOf("characters") > -1) {
-      //   return op.get("path").replace("characters", "leaves/0/text").split("/").slice(1,)
-      // } else {
-        return op.get("path").split("/").slice(1,)
-      // }
-    }
-
-    applyImmutableDiffOperations = (doc, differences) => {
-      differences.forEach(op => {
-        var currentNode = doc.note;
-        var path = this.getPath(op);;
-        var nodesExceptLast = path.slice(0, -1);;
-        var lastNode = path.slice(-1);;
-        var data;
-
-        // Move pointer of currentNode to last possible reference before
-        // we do the insertion, replacement or deletion.
-        nodesExceptLast.forEach(el => {
-          currentNode = currentNode[el];
-        })
-
-        if (op.get("op") == "add") {
-          // Operation inserts an element into a list or map.
-          data = customToJSON(op.get("value"));
-          lastNode = !isNaN(lastNode) ? parseInt(lastNode) : lastNode;
-          currentNode.insertAt(lastNode, data);
-        }
-        if (op.get("op") == "replace") {
-          // Operation replaces an element in a list or map.
-          data = op.get("value");
-          currentNode[lastNode] = data;
-        }
-        if (op.get("op") == "remove") {
-          // Operation removes an element from a list or map.
-          currentNode.deleteAt(parseInt(lastNode));
-        }
-      })
-    }
-
-    applySlateOperations = (doc, operations) => {
-      operations.forEach(op => {
-        if (allowedOperations.indexOf(op.type) == -1) {
-          return;
-        }
-        const {
-          path, offset, text, length, mark,
-          node, position, properties, newPath
-        } = op;
-        const index = path[path.length - 1];
-        const rest = path.slice(0, -1)
-        let currentNode = doc.note;
-        let characters;
-        switch (op.type) {
-          case "add_mark":
-            // Untested
-            path.forEach(el => {
-              currentNode = currentNode.nodes[el];
-            })
-            currentNode.characters.forEach((char, i) => {
-              if (i < offset) return;
-              if (i >= offset + length) return;
-              const hasMark = char.marks.find((charMark) => {
-                return charMark.type == mark.type
-              })
-              if (!hasMark) {
-                char.marks.push(mark)
-              }
-            })
-            break;
-          case "remove_mark":
-            // Untested
-            path.forEach(el => {
-              currentNode = currentNode.nodes[el];
-            })
-            currentNode.characters.forEach((char, i) => {
-              if (i < offset) return;
-              if (i >= offset + length) return;
-              const markIndex = char.marks.findIndex((charMark) => {
-                return charMark.type == mark.type
-              })
-              if (markIndex) {
-                char.marks.deleteAt(markIndex, 1);
-              }
-            })
-            break;
-          case "set_mark":
-            // Untested
-            path.forEach(el => {
-              currentNode = currentNode.nodes[el];
-            })
-            currentNode.characters.forEach((char, i) => {
-              if (i < offset) return;
-              if (i >= offset + length) return;
-              const markIndex = char.marks.findIndex((charMark) => {
-                return charMark.type == mark.type
-              })
-              if (markIndex) {
-                char.marks[markIndex] = mark;
-              }
-            })
-            break;
-          case "insert_text":
-            path.forEach(el => {
-              currentNode = currentNode.nodes[el];
-            })
-            const characterNode = {
-              object: "character",
-              marks: [],
-              text: text,
-            }
-            currentNode.characters.insertAt(offset, characterNode);
-            break;
-          case "remove_text":
-            path.forEach(el => {
-              currentNode = currentNode.nodes[el];
-            })
-            currentNode.characters.deleteAt(offset, text.length);
-            break;
-          case "split_node":
-            rest.forEach(el => {
-              currentNode = currentNode.nodes[el];
-            })
-            let childOne = currentNode.nodes[index];
-            let childTwo = JSON.parse(JSON.stringify(currentNode.nodes[index]));
-            if (childOne.object == "text") {
-              childOne.characters.splice(position)
-              childTwo.characters.splice(0, position)
-            } else {
-              childOne.nodes.splice(position)
-              childTwo.nodes.splice(0, position)
-            }
-            currentNode.nodes.insertAt(index + 1, childTwo);
-            if (properties) {
-              if (currentNode.nodes[index + 1].object !== "text") {
-                let propertiesJSON = customToJSON(properties);
-                Object.keys(propertiesJSON).forEach(key => {
-                  if (propertiesJSON.key) {
-                    currentNode.nodes[index + 1][key] = propertiesJSON.key;
-                  }
-                })
-              }
-            }
-            break;
-          case "merge_node":
-            rest.forEach(el => {
-              currentNode = currentNode.nodes[el];
-            })
-            let one = currentNode.nodes[index - 1];
-            let two = currentNode.nodes[index];
-            if (one.object == "text") {
-              one.characters.push(...two.characters)
-            } else {
-              one.nodes.push(...two.nodes)
-            }
-            currentNode.nodes.deleteAt(index, 1);
-            break;
-          case "insert_node":
-            rest.forEach(el => {
-              currentNode = currentNode.nodes[el];
-            })
-            currentNode.insertAt(index, customToJSON(node));
-            break;
-          case "remove_node":
-            rest.forEach(el => {
-              currentNode = currentNode.nodes[el];
-            })
-            currentNode.deleteAt(index, 1);
-            break;
-          case "set_node":
-            path.forEach(el => {
-              currentNode = currentNode.nodes[el];
-            })
-            for (let attrname in properties) {
-              currentNode[attrname] = properties[attrname];
-            }
-            break;
-          case "move_node":
-            const newIndex = newPath[newPath.length - 1]
-            const newParentPath = newPath.slice(0, -1)
-            const oldParentPath = path.slice(0, -1)
-            const oldIndex = path[path.length - 1]
-
-            // Remove the old node from it's current parent.
-            oldParentPath.forEach(el => {
-              currentNode = currentNode.nodes[el];
-            })
-            let nodeToMove = currentNode.deleteAt(oldIndex, 1);
-
-            // Find the new target...
-            if (
-              oldParentPath.every((x, i) => x === newParentPath[i]) &&
-              oldParentPath.length === newParentPath.length
-            ) {
-              // Do nothing
-            } else if (
-              oldParentPath.every((x, i) => x === newParentPath[i]) &&
-              oldIndex < newParentPath[oldParentPath.length]
-            ) {
-              // Otherwise, if the old path removal resulted in the new path being no longer
-              // correct, we need to decrement the new path at the old path's last index.
-              currentNode = doc.note;
-              newParentPath[oldParentPath.length]--
-              newParentPath.forEach(el => {
-                currentNode = currentNode.nodes[el];
-              })
-            } else {
-              // Otherwise, we can just grab the target normally...
-              currentNode = doc.note;
-              newParentPath.forEach(el => {
-                currentNode = currentNode.nodes[el];
-              })
-            }
-
-            // Insert the new node to its new parent.
-            currentNode.insertAt(newIndex, nodeToMove);
-            break;
-        }
-      })
-    }
-
     onChange1 = ({ operations, value }) => {
 
       var differences = diff(this.state.value.document, value.document);
@@ -397,8 +173,8 @@ class App extends React.Component {
         // Using the difference obtained from the Immutable diff library,
         // apply the operations to the Automerge document.
         const doc1b = Automerge.change(doc1, 'Editor1 change', doc => {
-          this.applyImmutableDiffOperations(doc, differences)
-          // this.applySlateOperations(doc, operations)
+          applyImmutableDiffOperations(doc, differences)
+          // applySlateOperations(doc, operations)
         })
 
         // Update doc2 changes
@@ -421,7 +197,7 @@ class App extends React.Component {
 
       if (differences.size > 0) {
         const doc2b = Automerge.change(doc2, 'Editor2 change', doc => {
-          this.applyImmutableDiffOperations(doc, differences)
+          applyImmutableDiffOperations(doc, differences)
           // doc.note = customToJSON(value)
           // doc.note = value
         })
