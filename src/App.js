@@ -68,7 +68,7 @@ class App extends React.Component {
       this.client = [];
 
       this.state = {
-        online: false,
+        online: true,
       }
     }
 

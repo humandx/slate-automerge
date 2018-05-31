@@ -61,14 +61,14 @@ export class Client extends React.Component {
     updateWithBatchedRemoteChanges = ( changesList ) => {
       // Update the Automerge document
       let docNew = this.doc;
+      let newValue = this.state.value;
       changesList.forEach((changes) => {
-        docNew = Automerge.applyChanges(docNew, changes)
+        const docNew = Automerge.applyChanges(this.doc, changes)
+        const opSetDiff = Automerge.diff(this.doc, docNew)
+        this.doc = docNew;
+        newValue = this.updateWithAutomergeOperations(newValue, opSetDiff);
       })
-      const opSetDiff = Automerge.diff(this.doc, docNew)
-      this.doc = docNew;
-
-      this.updateWithAutomergeOperations(opSetDiff);
-      this.syncSlateAndAutomerge();
+      this.setState({ value: newValue })
     }
 
     updateWithNewAutomergeDoc = ( automergeDoc ) => {
@@ -81,20 +81,22 @@ export class Client extends React.Component {
       const docNew = Automerge.applyChanges(this.doc, changes)
       const opSetDiff = Automerge.diff(this.doc, docNew)
       this.doc = docNew;
-      this.updateWithAutomergeOperations(opSetDiff);
+      const newValue = this.updateWithAutomergeOperations(this.state.value, opSetDiff);
+      this.setState({ value: newValue })
     }
 
-    updateWithAutomergeOperations = (opSetDiff) => {
+    updateWithAutomergeOperations = (currentValue, opSetDiff) => {
       // Convert the changes from the Automerge document to Slate operations
-      const slateOps = convertAutomergeToSlateOps(opSetDiff, this.state.pathMap, this.state.value)
-      console.log('slateOps: ', slateOps)
-      const change = this.state.value.change()
+      const pathMap = this.buildObjectIdMap();
+      const slateOps = convertAutomergeToSlateOps(opSetDiff, pathMap, currentValue)
+      console.log(`${this.props.clientNumber} slateOps`)
+      console.log(slateOps)
+      const change = currentValue.change()
       change.applyOperations(slateOps)
-      this.setState({ value: change.value })
 
       // Paths may have changed after applying operations - update objectId map
       // TODO: only change those values that changed
-      this.buildObjectIdMap()
+      return change.value
     }
 
     onChange = ({ operations, value }) => {
@@ -130,8 +132,9 @@ export class Client extends React.Component {
     buildObjectIdMap = () => {
       const history = Automerge.getHistory(this.doc)
       const snapshot = history[history.length - 1].snapshot.note
-
-      this.setState({pathMap: deepTraverse(snapshot, null, {}) })
+      const pathMap = deepTraverse(snapshot, null, {})
+      this.setState({ pathMap })
+      return pathMap;
     }
 
     syncSlateAndAutomerge = () => {
