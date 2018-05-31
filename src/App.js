@@ -15,7 +15,7 @@ var path = require('./intelie_diff/path');
 var concatPath = path.concat,
                   escape = path.escape;
 
-const initialValue = Value.fromJSON({
+const initialValue = {
   document: {
     nodes: [
       {
@@ -62,10 +62,11 @@ const initialValue = Value.fromJSON({
       }
     ]
   }
-})
+};
 
 let doc = Automerge.init();
 const initialSlateValue = Value.fromJSON(initialValue);
+const initialSlateValue2 = Value.fromJSON(initialValue);
 console.log(customToJSON(initialSlateValue.document))
 doc = Automerge.change(doc, 'Initialize Slate state', doc => {
   doc.note = customToJSON(initialSlateValue.document);
@@ -78,6 +79,7 @@ class App extends React.Component {
       super(props)
 
       this.broadcast = this.broadcast.bind(this);
+      this.client = [];
 
       this.state = {
         online: true,
@@ -128,22 +130,29 @@ class App extends React.Component {
 
     /////////////////////////////
     offlineSync = () => {
-        const doc1 = this.client1.getAutomergeDoc();
-        const doc2 = this.client2.getAutomergeDoc();
+      let docs = [];
+      this.client.forEach((client, idx) => {
+        docs[idx] = client.getAutomergeDoc();
+      });
 
-        const doc1new = Automerge.merge(doc1, doc2)
-        const docNew = Automerge.merge(doc2, doc1new)
+      let mergedDoc = docs[0];
+      docs.forEach((nextDoc, idx) => {
+        if (idx === 0) return;
+        mergedDoc = Automerge.merge(mergedDoc, nextDoc);
+      });
 
-        this.client1.updateWithNewAutomergeDoc(docNew);
-        this.client2.updateWithNewAutomergeDoc(docNew);
+      this.client.forEach((client, idx) => {
+        client.updateWithNewAutomergeDoc(mergedDoc);
+      });
+
     }
 
     broadcast = (clientNumber, changes) => {
-      if (clientNumber == 1) {
-        this.client2.updateWithRemoteChanges(changes);
-      } else if (clientNumber == 2) {
-        this.client1.updateWithRemoteChanges(changes);
-      }
+      this.client.forEach((client, idx) => {
+        if (clientNumber !== idx) {
+          client.updateWithRemoteChanges(changes);
+        }
+      })
     }
 
     toggleOnline = () => {
@@ -166,8 +175,9 @@ class App extends React.Component {
             <div>{onlineText}</div>
             <hr></hr>
             <Client
-                clientNumber={1}
-                ref={(client) => {this.client1 = client}}
+                key={0}
+                clientNumber={0}
+                ref={(client) => {this.client[0] = client}}
                 savedAutomergeDoc={savedAutomergeDoc}
                 initialSlateValue={initialSlateValue}
                 broadcast={this.broadcast}
@@ -175,10 +185,11 @@ class App extends React.Component {
             />
             <hr></hr>
             <Client
-                clientNumber={2}
-                ref={(client) => {this.client2 = client}}
+                key={1}
+                clientNumber={1}
+                ref={(client) => {this.client[1] = client}}
                 savedAutomergeDoc={savedAutomergeDoc}
-                initialSlateValue={initialSlateValue}
+                initialSlateValue={initialSlateValue2}
                 broadcast={this.broadcast}
                 online={this.state.online}
             />

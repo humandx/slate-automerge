@@ -112,6 +112,8 @@ export class Client extends React.Component {
     render = () => {
         return (
             <Editor
+                key={this.props.clientNumber}
+                ref={(e) => {this.editor = e}}
                 value={this.state.value}
                 onChange={this.onChange}
             />
