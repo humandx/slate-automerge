@@ -1,4 +1,5 @@
 import React from 'react'
+import Immutable from "immutable";
 import { Editor } from 'slate-react'
 import { Value, Block } from 'slate'
 import diff from './intelie_diff/diff'
@@ -140,9 +141,21 @@ class App extends React.Component {
       this.reflectDiff = this.reflectDiff.bind(this)
       this.removeNode = this.removeNode.bind(this)
 
+      this.onChange1 = this.onChange1.bind(this)
+      this.onChange2 = this.onChange2.bind(this)
+
       this.useChangeOps = this.useChangeOps.bind(this)
       this.buildObjectIdMap = this.buildObjectIdMap.bind(this)
       this.mockAutomerge = this.mockAutomerge.bind(this)
+
+      this.state = {
+        value: initialValue,
+        value2: initialValue2,
+        pathMap: {},
+        online: true,
+        doc1OfflineHistory: Immutable.List(),
+        doc2OfflineHistory: Immutable.List(),
+      }
     }
 
     componentDidMount = () => {
@@ -154,12 +167,6 @@ class App extends React.Component {
       doc2 = Automerge.merge(doc2, doc1)
       ///
       this.buildObjectIdMap()
-    }
-
-    state = {
-      value: initialValue,
-      value2: initialValue2,
-      pathMap: {}
     }
 
     onChange1 = ({ operations, value }) => {
@@ -185,7 +192,13 @@ class App extends React.Component {
 
         // Update doc1
         doc1 = doc1b
-        this.reflectDiffFromOneToTwo(opSetDiff, changes);
+        if (this.state.online) {
+          this.applyDiffToDoc2(opSetDiff, changes);
+        } else {
+          this.setState({
+            doc1OfflineHistory: this.state.doc1OfflineHistory.push({opSetDiff, changes})
+          })
+        }
       }
     }
 
@@ -198,23 +211,36 @@ class App extends React.Component {
       if (differences.size > 0) {
         const doc2b = Automerge.change(doc2, 'Editor2 change', doc => {
           applyImmutableDiffOperations(doc, differences)
-          // doc.note = customToJSON(value)
-          // doc.note = value
+          // applySlateOperations(doc, operations)
         })
 
         // Update doc1 changes
-        const opSetDiff = Automerge.diff(doc1, doc2b)
-        const changes = Automerge.getChanges(doc1, doc2b)
+        const opSetDiff = Automerge.diff(doc2, doc2b)
+        const changes = Automerge.getChanges(doc2, doc2b)
         console.log(changes)
         // doc1 = Automerge.applyChanges(doc1, changes)
 
         // Update doc2
         doc2 = doc2b
-        this.reflectDiffFromTwoToOne(opSetDiff, changes);
+        if (this.state.online) {
+          this.applyDiffToDoc1(opSetDiff, changes);
+        } else {
+          this.setState({
+            doc2OfflineHistory: this.state.doc2OfflineHistory.push({opSetDiff, changes})
+          })
+        }
       }
     }
 
-    lastHistoryValue() {
+    toggleOnline = () => {
+      this.setState({online: true});
+    }
+
+    toggleOffline = () => {
+      this.setState({online: false});
+    }
+
+    lastHistoryValue = () => {
       const history = Automerge.getHistory(doc2)
       const lastObj = history[history.length - 1]
       const lastObjJSON = JSON.stringify(lastObj.snapshot.note)
@@ -224,11 +250,11 @@ class App extends React.Component {
       return docVal
     }
 
-    findChanges() {
+    findChanges = () => {
       console.log(Automerge.diff(doc2, doc1))
     }
 
-    immutablePatch() {
+    immutablePatch = () => {
       var differences = diff(this.state.value.document, this.state.value2.document)
 
       differences.forEach((key) => {
@@ -249,7 +275,7 @@ class App extends React.Component {
       })
     }
 
-    reflect() {
+    reflect = () => {
       const history = Automerge.getHistory(doc1)
       const automergeOps = history[history.length - 1].change.ops
       const slateOps = []
@@ -348,44 +374,24 @@ class App extends React.Component {
     //     Actual: Inserted text overwrites some chars in merged node
     //     Probably because merge node is equal to delete entire nodes
     //     and re-insert with new text
-    reflectDiff() {
-      const opSetDiff = Automerge.diff(doc2, doc1)
+    reflectDiff = () => {
+      // const opSetDiff = Automerge.diff(doc2, doc1)
+      // const slateOps = convertAutomergeToSlateOps(opSetDiff, this.state.pathMap, this.state.value2)
 
-      const slateOps = convertAutomergeToSlateOps(opSetDiff, this.state.pathMap, this.state.value2)
+      const doc1new = Automerge.merge(doc1, doc2)
+      const doc2new = Automerge.merge(doc2, doc1new)
 
-      console.log('slateOps: ', slateOps)
-      const change = this.state.value2.change()
-      change.applyOperations(slateOps)
-      this.setState({ value2: change.value })
+      const opSetDiff1 = Automerge.diff(doc1, doc1new)
+      const changes1 = Automerge.getChanges(doc1, doc1new)
 
-      // Update the Automerge document as well
-      // TODO: only apply `diff` changes
-      // doc2 = Automerge.applyChanges(doc2, automergeOps)
-      doc2 = Automerge.merge(doc2, doc1)
+      const opSetDiff2 = Automerge.diff(doc2, doc2new)
+      const changes2 = Automerge.getChanges(doc2, doc2new)
 
-      // Paths may have changed after applying operations - update objectId map
-      // TODO: only change those values that changed
-      this.buildObjectIdMap()
+      this.applyDiffToDoc1(opSetDiff1, changes1)
+      this.applyDiffToDoc2(opSetDiff2, changes2)
     }
 
-    reflectDiffFromOneToTwo(opSetDiff, changes) {
-
-      const slateOps = convertAutomergeToSlateOps(opSetDiff, this.state.pathMap, this.state.value2)
-
-      console.log('slateOps: ', slateOps)
-      const change = this.state.value2.change()
-      change.applyOperations(slateOps)
-      this.setState({ value2: change.value })
-
-      // Update the Automerge document as well
-      doc2 = Automerge.applyChanges(doc2, changes)
-
-      // Paths may have changed after applying operations - update objectId map
-      // TODO: only change those values that changed
-      this.buildObjectIdMap()
-    }
-
-    reflectDiffFromTwoToOne(opSetDiff, changes) {
+    applyDiffToDoc1 = (opSetDiff, changes) => {
 
       const slateOps = convertAutomergeToSlateOps(opSetDiff, this.state.pathMap, this.state.value2)
 
@@ -402,7 +408,24 @@ class App extends React.Component {
       this.buildObjectIdMap()
     }
 
-    removeNode() {
+    applyDiffToDoc2 = (opSetDiff, changes) => {
+
+      const slateOps = convertAutomergeToSlateOps(opSetDiff, this.state.pathMap, this.state.value2)
+
+      console.log('slateOps: ', slateOps)
+      const change = this.state.value2.change()
+      change.applyOperations(slateOps)
+      this.setState({ value2: change.value })
+
+      // Update the Automerge document as well
+      doc2 = Automerge.applyChanges(doc2, changes)
+
+      // Paths may have changed after applying operations - update objectId map
+      // TODO: only change those values that changed
+      this.buildObjectIdMap()
+    }
+
+    removeNode = () => {
       const rm = {
         type: 'remove_node',
         path: [1],
@@ -414,7 +437,7 @@ class App extends React.Component {
       this.setState({ value: change.value })
     }
 
-    pathConv(pathStr) {
+    pathConv = (pathStr) => {
       const result = pathStr.match(/\d+/g).map(v => {
         return parseInt(v, 10)
       })
@@ -430,7 +453,7 @@ class App extends React.Component {
       return { path, offset }
     }
 
-    useChangeOps() {
+    useChangeOps = () => {
       const firstObjOps = Automerge.getHistory(doc1)[0].change.ops
 
       firstObjOps.map(op => {
@@ -447,14 +470,14 @@ class App extends React.Component {
       })
     }
 
-    buildObjectIdMap() {
+    buildObjectIdMap = () => {
       const history = Automerge.getHistory(doc1)
       const snapshot = history[history.length - 1].snapshot.note
 
       this.setState({pathMap: this.deepTraverse(snapshot, null, {}) })
     }
 
-    deepTraverse(obj, p, pathMap) {
+    deepTraverse = (obj, p, pathMap) => {
       let path = p || ''
       const isList = obj instanceof Array
 
@@ -487,7 +510,7 @@ class App extends React.Component {
       return pathMap
     }
 
-    mockAutomerge() {
+    mockAutomerge = () => {
       const slateOps = []
       let slateOp = {
         type: 'split_node',
@@ -514,7 +537,7 @@ class App extends React.Component {
 
     /////////////////////////////
 
-    render() {
+    render = () => {
         return (
           <div>
             <Editor
@@ -547,6 +570,10 @@ class App extends React.Component {
             <button onClick={this.buildObjectIdMap}>Deep Traverse</button>
             <button onClick={() => {console.log(this.state.pathMap)}}>Log Path Map</button>
             <button onClick={this.mockAutomerge}>Mock Automerge to Slate</button>
+            <hr></hr>
+            <button onClick={this.toggleOnline}>Toggle online mode</button>
+            <button onClick={this.toggleOffline}>Toggle off-line mode</button>
+            <button onClick={this.reflectDiff}>Sync off-line mode</button>
             {/* <button onClick={() => {console.log(diff(this.state.value.document, this.state.value2.document))}}>ImmutableDiff</button>
             <button onClick={() => {console.log(diff(this.state.value2.document, this.state.value.document))}}>Diff2to1</button>
             <button onClick={() => {console.log(Value.fromJSON(rtv).toJSON())}}>Doc3 JSON</button>
