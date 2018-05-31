@@ -48,10 +48,26 @@ export class Client extends React.Component {
     getStoredLocalChanges = () => {
       // How can I use this?
       console.log(`Sending: ${this.state.docOfflineHistory}`)
+      setTimeout(() => {
+        this.setState({docOfflineHistory: Immutable.List()})
+      })
+      return this.state.docOfflineHistory;
     }
 
     getAutomergeDoc = () => {
       return this.doc;
+    }
+
+    updateWithBatchedRemoteChanges = ( changesList ) => {
+      // Update the Automerge document
+      let docNew = this.doc;
+      changesList.forEach((changes) => {
+        docNew = Automerge.applyChanges(docNew, changes)
+      })
+      const opSetDiff = Automerge.diff(this.doc, docNew)
+      this.doc = docNew;
+
+      this.updateWithAutomergeOperations(opSetDiff);
     }
 
     updateWithNewAutomergeDoc = ( automergeDoc ) => {
@@ -63,7 +79,11 @@ export class Client extends React.Component {
       // Update the Automerge document
       const docNew = Automerge.applyChanges(this.doc, changes)
       const opSetDiff = Automerge.diff(this.doc, docNew)
+      this.doc = docNew;
+      this.updateWithAutomergeOperations(opSetDiff);
+    }
 
+    updateWithAutomergeOperations = (opSetDiff) => {
       // Convert the changes from the Automerge document to Slate operations
       const slateOps = convertAutomergeToSlateOps(opSetDiff, this.state.pathMap, this.state.value)
       console.log('slateOps: ', slateOps)
@@ -71,12 +91,9 @@ export class Client extends React.Component {
       change.applyOperations(slateOps)
       this.setState({ value: change.value })
 
-      this.doc = docNew;
-
       // Paths may have changed after applying operations - update objectId map
       // TODO: only change those values that changed
       this.buildObjectIdMap()
-
     }
 
     onChange = ({ operations, value }) => {

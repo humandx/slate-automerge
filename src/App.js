@@ -144,7 +144,21 @@ class App extends React.Component {
       this.client.forEach((client, idx) => {
         client.updateWithNewAutomergeDoc(mergedDoc);
       });
+    }
 
+    offlineSync2 = () => {
+      let changesList = [];
+      this.client.forEach((client, idx) => {
+        changesList[idx] = client.getStoredLocalChanges();
+      });
+
+      this.client.forEach((client, clientIdx) => {
+        changesList.forEach((changes, changeIdx) => {
+          if (clientIdx !== changeIdx) {
+            client.updateWithBatchedRemoteChanges(changes);
+          }
+        });
+      });
     }
 
     broadcast = (clientNumber, changes) => {
@@ -196,7 +210,10 @@ class App extends React.Component {
             <hr></hr>
             <button onClick={this.toggleOnline}>{toggleButtonText}</button>
             {!this.state.online &&
-              <button onClick={this.offlineSync}>Sync off-line mode</button>
+              <div>
+                <button onClick={this.offlineSync}>Sync off-line mode v1</button>
+                <button onClick={this.offlineSync2}>Sync off-line mode v2</button>
+              </div>
             }
           </div>
         )
