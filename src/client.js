@@ -24,10 +24,16 @@ export class Client extends React.Component {
       this.doc = Automerge.load(this.props.savedAutomergeDoc)
       this.buildObjectIdMap = this.buildObjectIdMap.bind(this)
 
+      // const initialValue = automergeJsontoSlate({
+      //   "document": {...this.doc.note}
+      // })
+      // const initialSlateValue = Value.fromJSON(initialValue);
+
       // Should build the Slate value from this.doc
 
       this.state = {
         value: this.props.initialSlateValue,
+        // value: initialSlateValue,
         pathMap: {},
         online: true,
         docOfflineHistory: Immutable.List(),
@@ -35,6 +41,7 @@ export class Client extends React.Component {
     }
 
     componentDidMount = () => {
+
       this.buildObjectIdMap()
     }
 
