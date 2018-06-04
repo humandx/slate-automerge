@@ -1,113 +1,107 @@
-export const convertAutomergeToSlateOps = (automergeOps, pathMap, value) => {
-  // To build objects from Automerge operations
-  const slateOps = []
-  const objIdMap = {}
-  const deferredOps = []
+const automergeOpCreate = (op, objIdMap) => {
+  switch (op.type) {
+    case 'map':
+      objIdMap[op.obj] = {}
+      break;
+    case 'list':
+      objIdMap[op.obj] = []
+      break;
+    default:
+      console.error('`create`, unsupported type: ', op.type)
+  }
+  return objIdMap;
+}
 
-  automergeOps.map(op => {
-    if (op.action === 'create') {
-      switch (op.type) {
-        case 'map':
-          objIdMap[op.obj] = {}
-          break;
-        case 'list':
-          objIdMap[op.obj] = []
-          break;
-        default:
-          console.error('`create`, unsupported type: ', op.type)
-      }
+const automergeOpRemove = (op, objIdMap, slateOps, pathMap, value) => {
+    let pathString, slatePath, slateOp
+    pathString = pathMap[op.obj].match(/\d+/g)
+    if (pathString) {
+      slatePath = pathString.map(x => {
+        return parseInt(x, 10);
+      });
+    }
+    else {
+      // FIXME: Is `op.index` always the right path? What happens in a
+      // sub-node (in other words, will `slatePath` ever need to have
+      // length > 1?
+      slatePath = [op.index]
     }
 
-    if (op.action === 'remove') {
-      let pathString, slatePath, slateOp
-
-      pathString = pathMap[op.obj].match(/\d+/g)
-      if (pathString) {
-        slatePath = pathString.map(x => {
-          return parseInt(x, 10);
-        });
-      }
-      else {
-        // FIXME: Is `op.index` always the right path? What happens in a
-        // sub-node (in other words, will `slatePath` ever need to have
-        // length > 1?
-        slatePath = [op.index]
-      }
-
-      // Validate the operation using the node type at path given by `op.obj`
-      // FIXME: Is the Slate's Value reliable enough to get the node type?
-      // Use the document to be changed
-      const removeNode = value.document.getNodeAtPath(slatePath)
-      switch (removeNode.object) {
-        case 'text':
-          slateOp = {
-            type: 'remove_text',
-            path: slatePath,
-            offset: op.index,
-            text: '*',
-            marks: []
-          }
-          break;
-        case 'block':
-          slateOp = {
-            type: 'remove_node',
-            path: slatePath,
-            node: removeNode
-          }
-          break;
-        default:
-          console.error('`remove`, unsupported node type: ', removeNode.object)
-      }
-
-      slateOps.push(slateOp)
-    }
-
-    if (op.action === "set") {
-      if (op.hasOwnProperty('link')) {
-        // What's the point of the `link` field? All my experiments
-        // have `link` = true
-        if (op.link) {
-          // Check if linking to a newly created object or one that
-          // already exists in our Automerge document
-          if (objIdMap.hasOwnProperty(op.value)) {
-            objIdMap[op.obj][op.key] = objIdMap[op.value]
-          }
-          else if (pathMap.hasOwnProperty(op.value)) {
-            objIdMap[op.obj][op.key] = pathMap[op.value]
-          }
-          else {
-            // TODO: Does this ever happen?
-            console.error('`set`, unable to find objectId: ', op.value)
-          }
+    // Validate the operation using the node type at path given by `op.obj`
+    // FIXME: Is the Slate's Value reliable enough to get the node type?
+    // Use the document to be changed
+    const removeNode = value.document.getNodeAtPath(slatePath)
+    switch (removeNode.object) {
+      case 'text':
+        slateOp = {
+          type: 'remove_text',
+          path: slatePath,
+          offset: op.index,
+          text: '*',
+          marks: []
         }
-      }
-      else {
-        objIdMap[op.obj][op.key] = op.value
-      }
+        break;
+      case 'block':
+        slateOp = {
+          type: 'remove_node',
+          path: slatePath,
+          node: removeNode
+        }
+        break;
+      default:
+        console.error('`remove`, unsupported node type: ', removeNode.object)
     }
+    slateOps.push(slateOp)
+    return slateOps;
+}
 
-    if (op.action === 'insert') {
+const automergeOpSet = (op, objIdMap, pathMap) => {
+    if (op.hasOwnProperty('link')) {
+      // What's the point of the `link` field? All my experiments
+      // have `link` = true
       if (op.link) {
-        // Check if inserting into a newly created object or one that
+        // Check if linking to a newly created object or one that
         // already exists in our Automerge document
-        if (objIdMap.hasOwnProperty(op.obj)) {
-          objIdMap[op.obj][op.index] = objIdMap[op.value]
+        if (objIdMap.hasOwnProperty(op.value)) {
+          objIdMap[op.obj][op.key] = objIdMap[op.value]
         }
-        else if (pathMap.hasOwnProperty(op.obj)) {
-          deferredOps.push(op)
+        else if (pathMap.hasOwnProperty(op.value)) {
+          objIdMap[op.obj][op.key] = pathMap[op.value]
         }
         else {
           // TODO: Does this ever happen?
-          console.error('`insert`, unable to find objectId: ', op.obj)
+          console.error('`set`, unable to find objectId: ', op.value)
         }
+      }
+    } else {
+      objIdMap[op.obj][op.key] = op.value
+    }
+    return objIdMap;
+}
+
+const automergeOpInsert = (op, objIdMap, pathMap, deferredOps) => {
+    if (op.link) {
+      // Check if inserting into a newly created object or one that
+      // already exists in our Automerge document
+      if (objIdMap.hasOwnProperty(op.obj)) {
+        objIdMap[op.obj][op.index] = objIdMap[op.value]
+      }
+      else if (pathMap.hasOwnProperty(op.obj)) {
+        deferredOps.push(op)
       }
       else {
         // TODO: Does this ever happen?
-        console.log('op.action is `insert`, but link is false')
+        console.error('`insert`, unable to find objectId: ', op.obj)
       }
     }
-  })
+    else {
+      // TODO: Does this ever happen?
+      console.log('op.action is `insert`, but link is false')
+    }
+    return {objIdMap, deferredOps};
+}
 
+const automergeOpInsertText = (deferredOps, objIdMap, pathMap, slateOps) => {
   // We know all ops in this list have the following conditions true:
   //  - op.action === `insert`
   //  - pathMap.hasOwnProperty(op.obj)
@@ -179,5 +173,35 @@ export const convertAutomergeToSlateOps = (automergeOps, pathMap, value) => {
 
     slateOps.push(slateOp)
   })
+}
+
+export const convertAutomergeToSlateOps = (automergeOps, pathMap, value) => {
+  // To build objects from Automerge operations
+  let slateOps = []
+  let objIdMap = {}
+  let deferredOps = []
+
+  automergeOps.map(op => {
+    switch (op.action) {
+      case "create":
+        objIdMap = automergeOpCreate(op, objIdMap);
+        break;
+      case "remove":
+        slateOps = automergeOpRemove(op, objIdMap, slateOps, pathMap, value);
+        break;
+      case "set":
+        objIdMap = automergeOpSet(op, objIdMap, pathMap);
+        break;
+      case "insert":
+        let temp = automergeOpInsert(op, objIdMap, pathMap, deferredOps);
+        objIdMap = temp.objIdMap;
+        deferredOps = temp.deferredOps;
+        break;
+    }
+  })
+
+  if (deferredOps) {
+    automergeOpInsertText(deferredOps, objIdMap, pathMap, slateOps);
+  }
   return slateOps;
 }
