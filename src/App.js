@@ -72,7 +72,10 @@ class App extends React.Component {
       }
     }
 
-    offlineSync = () => {
+    /**
+     * NOT USED
+     */
+    offlineSyncUsingMerge = () => {
       let docs = [];
       this.client.forEach((client, idx) => {
         docs[idx] = client.getAutomergeDoc();
@@ -89,7 +92,7 @@ class App extends React.Component {
       });
     }
 
-    offlineSync2 = () => {
+    offlineSync = () => {
       let changesList = [];
       this.client.forEach((client, idx) => {
         changesList[idx] = client.getStoredLocalChanges();
@@ -118,46 +121,51 @@ class App extends React.Component {
 
     render = () => {
         let onlineText;
+        let onlineTextClass;
         let toggleButtonText;
         if (this.state.online) {
           onlineText = "CURRENTLY LIVE SYNCING"
-          toggleButtonText = "Toggle offline mode"
+          onlineTextClass = "online-text green"
+          toggleButtonText = "GO OFFLINE"
         } else {
           onlineText = "CURRENTLY OFFLINE"
-          toggleButtonText = "Toggle online mode"
+          onlineTextClass = "online-text red"
+          toggleButtonText = "GO ONLINE"
         }
 
         return (
           <div>
-            <div>{onlineText}</div>
+            <div className={onlineTextClass}>{onlineText}</div>
             <hr></hr>
-            <Client
-                key={0}
-                clientNumber={0}
-                ref={(client) => {this.client[0] = client}}
-                savedAutomergeDoc={savedAutomergeDoc}
-                initialSlateValue={initialSlateValue}
-                broadcast={this.broadcast}
-                online={this.state.online}
-            />
+            <div className="client">
+              <Client
+                  key={0}
+                  clientNumber={0}
+                  ref={(client) => {this.client[0] = client}}
+                  savedAutomergeDoc={savedAutomergeDoc}
+                  initialSlateValue={initialSlateValue}
+                  broadcast={this.broadcast}
+                  online={this.state.online}
+              />
+            </div>
+            <div className="client">
+              <Client
+                  key={1}
+                  clientNumber={1}
+                  ref={(client) => {this.client[1] = client}}
+                  savedAutomergeDoc={savedAutomergeDoc}
+                  initialSlateValue={initialSlateValue2}
+                  broadcast={this.broadcast}
+                  online={this.state.online}
+              />
+            </div>
             <hr></hr>
-            <Client
-                key={1}
-                clientNumber={1}
-                ref={(client) => {this.client[1] = client}}
-                savedAutomergeDoc={savedAutomergeDoc}
-                initialSlateValue={initialSlateValue2}
-                broadcast={this.broadcast}
-                online={this.state.online}
-            />
-            <hr></hr>
-            <button onClick={this.toggleOnline}>{toggleButtonText}</button>
-            {!this.state.online &&
-              <div>
-                <button onClick={this.offlineSync}>Sync off-line mode v1</button>
-                <button onClick={this.offlineSync2}>Sync off-line mode v2</button>
-              </div>
-            }
+            <div className="buttons">
+              <button className="online-button" onClick={this.toggleOnline}>{toggleButtonText}</button>
+              {!this.state.online &&
+                  <button className="online-button" onClick={this.offlineSync}>Sync</button>
+              }
+            </div>
           </div>
         )
     }
