@@ -1,4 +1,4 @@
-import customToJSON from "./customToJson"
+import slateCustomToJson from "./slateCustomToJson"
 
 const allowedOperations = [
   "insert_text", "remove_text", "insert_node", "split_node",
@@ -100,7 +100,7 @@ export const applySlateOperations = (doc, operations) => {
         currentNode.nodes.insertAt(index + 1, childTwo);
         if (properties) {
           if (currentNode.nodes[index + 1].object !== "text") {
-            let propertiesJSON = customToJSON(properties);
+            let propertiesJSON = slateCustomToJson(properties);
             Object.keys(propertiesJSON).forEach(key => {
               if (propertiesJSON.key) {
                 currentNode.nodes[index + 1][key] = propertiesJSON.key;
@@ -126,7 +126,7 @@ export const applySlateOperations = (doc, operations) => {
         rest.forEach(el => {
           currentNode = currentNode.nodes[el];
         })
-        currentNode.insertAt(index, customToJSON(node));
+        currentNode.insertAt(index, slateCustomToJson(node));
         break;
       case "remove_node":
         rest.forEach(el => {

@@ -1,4 +1,4 @@
-import customToJSON from "./customToJson"
+import slateCustomToJson from "./slateCustomToJson"
 
 const getPath = (op) => {
     return op.get("path").split("/").slice(1,)
@@ -20,7 +20,7 @@ export const applyImmutableDiffOperations = (doc, differences) => {
 
     if (op.get("op") == "add") {
       // Operation inserts an element into a list or map.
-      data = customToJSON(op.get("value"));
+      data = slateCustomToJson(op.get("value"));
       lastNode = !isNaN(lastNode) ? parseInt(lastNode) : lastNode;
       currentNode.insertAt(lastNode, data);
     }

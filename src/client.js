@@ -1,14 +1,12 @@
 import React from 'react'
 import Immutable from "immutable";
 import { Editor } from 'slate-react'
-import { Value, Block } from 'slate'
+import { Value } from 'slate'
 import diff from './intelie_diff/diff'
-import customToJSON from "./utils/customToJson"
 import { applyImmutableDiffOperations } from "./utils/immutableDiffToAutomerge"
 import { applySlateOperations } from "./utils/slateOpsToAutomerge"
 import { convertAutomergeToSlateOps } from "./utils/convertAutomergeToSlateOps"
-import { deepTraverse } from "./utils/deepTraverse"
-import slateDiff from 'slate-diff'
+import { mapObjectIdToPath } from "./utils/mapObjectId"
 import Automerge from 'automerge'
 
 
@@ -16,9 +14,6 @@ export class Client extends React.Component {
 
     constructor(props) {
       super(props)
-
-      // this.reflectDiff = this.reflectDiff.bind(this)
-      // this.reflectDiff2 = this.reflectDiff2.bind(this)
 
       this.onChange = this.onChange.bind(this)
       this.doc = Automerge.load(this.props.savedAutomergeDoc)
@@ -131,7 +126,7 @@ export class Client extends React.Component {
     buildObjectIdMap = () => {
       const history = Automerge.getHistory(this.doc)
       const snapshot = history[history.length - 1].snapshot.note
-      this.pathMap = deepTraverse(snapshot, null, {})
+      this.pathMap = mapObjectIdToPath(snapshot, null, {})
       return this.pathMap;
     }
 

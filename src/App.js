@@ -1,19 +1,11 @@
 import React from 'react'
-import Immutable from "immutable";
-import { Editor } from 'slate-react'
-import { Value, Block } from 'slate'
-import diff from './intelie_diff/diff'
-import customToJSON from "./utils/customToJson"
-import { applyImmutableDiffOperations } from "./utils/immutableDiffToAutomerge"
-import { applySlateOperations } from "./utils/slateOpsToAutomerge"
-import { convertAutomergeToSlateOps } from "./utils/convertAutomergeToSlateOps"
-import slateDiff from 'slate-diff'
+import { Value } from 'slate'
+import slateCustomToJson from "./utils/slateCustomToJson"
 import Automerge from 'automerge'
 import { Client } from "./client"
 
 var path = require('./intelie_diff/path');
-var concatPath = path.concat,
-                  escape = path.escape;
+var concatPath = path.concat, escape = path.escape;
 
 const initialValue = {
   document: {
@@ -53,9 +45,9 @@ const initialValue = {
 let doc = Automerge.init();
 const initialSlateValue = Value.fromJSON(initialValue);
 const initialSlateValue2 = Value.fromJSON(initialValue);
-console.log(customToJSON(initialSlateValue.document))
+console.log(slateCustomToJson(initialSlateValue.document))
 doc = Automerge.change(doc, 'Initialize Slate state', doc => {
-  doc.note = customToJSON(initialSlateValue.document);
+  doc.note = slateCustomToJson(initialSlateValue.document);
 })
 const savedAutomergeDoc = Automerge.save(doc);
 
