@@ -23,6 +23,7 @@ export class Client extends React.Component {
       this.onChange = this.onChange.bind(this)
       this.doc = Automerge.load(this.props.savedAutomergeDoc)
       this.buildObjectIdMap = this.buildObjectIdMap.bind(this)
+      this.pathMap = null;
 
       // const initialValue = automergeJsontoSlate({
       //   "document": {...this.doc.note}
@@ -34,14 +35,12 @@ export class Client extends React.Component {
       this.state = {
         value: this.props.initialSlateValue,
         // value: initialSlateValue,
-        pathMap: {},
         online: true,
         docOfflineHistory: Immutable.List(),
       }
     }
 
     componentDidMount = () => {
-
       this.buildObjectIdMap()
     }
 
@@ -87,13 +86,13 @@ export class Client extends React.Component {
 
     updateWithAutomergeOperations = (currentValue, opSetDiff) => {
       // Convert the changes from the Automerge document to Slate operations
-      const pathMap = this.buildObjectIdMap();
-      const slateOps = convertAutomergeToSlateOps(opSetDiff, pathMap, currentValue)
+      let prevPathMap = this.pathMap;
+      this.buildObjectIdMap();
+      const slateOps = convertAutomergeToSlateOps(opSetDiff, this.pathMap, prevPathMap, currentValue)
       console.log(`${this.props.clientNumber} slateOps`)
       console.log(slateOps)
       const change = currentValue.change()
       change.applyOperations(slateOps)
-
       // Paths may have changed after applying operations - update objectId map
       // TODO: only change those values that changed
       return change.value
@@ -110,8 +109,8 @@ export class Client extends React.Component {
         // Using the difference obtained from the Immutable diff library,
         // apply the operations to the Automerge document.
         const docNew = Automerge.change(this.doc, `Client ${this.props.clientNumber}`, doc => {
-          applyImmutableDiffOperations(doc, differences)
-          // applySlateOperations(doc, operations)
+          // applyImmutableDiffOperations(doc, differences)
+          applySlateOperations(doc, operations)
         })
 
         // Get Automerge changes
@@ -132,9 +131,8 @@ export class Client extends React.Component {
     buildObjectIdMap = () => {
       const history = Automerge.getHistory(this.doc)
       const snapshot = history[history.length - 1].snapshot.note
-      const pathMap = deepTraverse(snapshot, null, {})
-      this.setState({ pathMap })
-      return pathMap;
+      this.pathMap = deepTraverse(snapshot, null, {})
+      return this.pathMap;
     }
 
     syncSlateAndAutomerge = () => {

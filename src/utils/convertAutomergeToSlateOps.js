@@ -12,9 +12,14 @@ const automergeOpCreate = (op, objIdMap) => {
   return objIdMap;
 }
 
-const automergeOpRemove = (op, objIdMap, slateOps, pathMap, value) => {
+const automergeOpRemove = (op, objIdMap, slateOps, pathMap, value, prevPathMap) => {
     let pathString, slatePath, slateOp
-    pathString = pathMap[op.obj].match(/\d+/g)
+    pathString = pathMap[op.obj]
+    if (pathString) {
+      pathString = pathString.match(/\d+/g)
+    } else {
+      return slateOps;
+    }
     if (pathString) {
       slatePath = pathString.map(x => {
         return parseInt(x, 10);
@@ -55,7 +60,7 @@ const automergeOpRemove = (op, objIdMap, slateOps, pathMap, value) => {
     return slateOps;
 }
 
-const automergeOpSet = (op, objIdMap, pathMap) => {
+const automergeOpSet = (op, objIdMap, pathMap, prevPathMap) => {
     if (op.hasOwnProperty('link')) {
       // What's the point of the `link` field? All my experiments
       // have `link` = true
@@ -79,7 +84,7 @@ const automergeOpSet = (op, objIdMap, pathMap) => {
     return objIdMap;
 }
 
-const automergeOpInsert = (op, objIdMap, pathMap, deferredOps) => {
+const automergeOpInsert = (op, objIdMap, pathMap, deferredOps, prevPathMap) => {
     if (op.link) {
       // Check if inserting into a newly created object or one that
       // already exists in our Automerge document
@@ -101,7 +106,7 @@ const automergeOpInsert = (op, objIdMap, pathMap, deferredOps) => {
     return {objIdMap, deferredOps};
 }
 
-const automergeOpInsertText = (deferredOps, objIdMap, pathMap, slateOps) => {
+const automergeOpInsertText = (deferredOps, objIdMap, pathMap, slateOps, prevPathMap, value) => {
   // We know all ops in this list have the following conditions true:
   //  - op.action === `insert`
   //  - pathMap.hasOwnProperty(op.obj)
@@ -113,20 +118,49 @@ const automergeOpInsertText = (deferredOps, objIdMap, pathMap, slateOps) => {
     let pathString, slatePath
     let slateOp
 
+    let oldPathValue = prevPathMap[op.value]
+    let newPathValue = pathMap[op.value]
+
     // If the `pathString` is available, then we are likely inserting text
     // FIXME: Verify this
+    let newValue = value;
     pathString = insertInto.match(/\d+/g)
     if (pathString) {
       slatePath = pathString.map(x => {
         return parseInt(x, 10);
       });
 
-      slateOp = {
-        type: 'insert_text',
-        path: slatePath,
-        offset: op.index,
-        text: objIdMap[op.value].text,
-        marks: objIdMap[op.value].marks
+      if (objIdMap[op.value]) {
+        slateOp = {
+          type: 'insert_text',
+          path: slatePath,
+          offset: op.index,
+          text: objIdMap[op.value].text,
+          marks: objIdMap[op.value].marks
+        }
+      } else {
+        let prevPath = prevPathMap[op.value];
+        const rightEnd = prevPath.indexOf("characters")
+        prevPath = prevPath.slice(0,rightEnd)
+        pathString = prevPath.match(/\d+/g)
+        let oldSlatePath = pathString.map(x => {
+          return parseInt(x, 10);
+        });
+
+        let prevIndex = prevPathMap[op.value].slice(rightEnd)
+        let pathIndex = prevIndex.match(/\d+/g)
+        let oldSlateIndex = pathIndex.map(x => {
+          return parseInt(x, 10);
+        })[0];
+        let character = value.document.getNodeAtPath(oldSlatePath).characters.get(oldSlateIndex)
+
+        slateOp = {
+          type: 'insert_text',
+          path: slatePath,
+          offset: op.index,
+          text: character.text,
+          marks: character.marks
+        }
       }
     }
     else {
@@ -175,7 +209,7 @@ const automergeOpInsertText = (deferredOps, objIdMap, pathMap, slateOps) => {
   })
 }
 
-export const convertAutomergeToSlateOps = (automergeOps, pathMap, value) => {
+export const convertAutomergeToSlateOps = (automergeOps, pathMap, prevPathMap, value) => {
   // To build objects from Automerge operations
   let slateOps = []
   let objIdMap = {}
@@ -187,13 +221,13 @@ export const convertAutomergeToSlateOps = (automergeOps, pathMap, value) => {
         objIdMap = automergeOpCreate(op, objIdMap);
         break;
       case "remove":
-        slateOps = automergeOpRemove(op, objIdMap, slateOps, pathMap, value);
+        slateOps = automergeOpRemove(op, objIdMap, slateOps, pathMap, value, prevPathMap);
         break;
       case "set":
-        objIdMap = automergeOpSet(op, objIdMap, pathMap);
+        objIdMap = automergeOpSet(op, objIdMap, pathMap, prevPathMap);
         break;
       case "insert":
-        let temp = automergeOpInsert(op, objIdMap, pathMap, deferredOps);
+        let temp = automergeOpInsert(op, objIdMap, pathMap, deferredOps, prevPathMap);
         objIdMap = temp.objIdMap;
         deferredOps = temp.deferredOps;
         break;
@@ -201,7 +235,7 @@ export const convertAutomergeToSlateOps = (automergeOps, pathMap, value) => {
   })
 
   if (deferredOps) {
-    automergeOpInsertText(deferredOps, objIdMap, pathMap, slateOps);
+    automergeOpInsertText(deferredOps, objIdMap, pathMap, slateOps, prevPathMap, value);
   }
   return slateOps;
 }

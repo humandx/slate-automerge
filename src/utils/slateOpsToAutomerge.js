@@ -132,7 +132,7 @@ export const applySlateOperations = (doc, operations) => {
         rest.forEach(el => {
           currentNode = currentNode.nodes[el];
         })
-        currentNode.deleteAt(index, 1);
+        currentNode.nodes.deleteAt(index, 1);
         break;
       case "set_node":
         path.forEach(el => {
@@ -152,7 +152,7 @@ export const applySlateOperations = (doc, operations) => {
         oldParentPath.forEach(el => {
           currentNode = currentNode.nodes[el];
         })
-        let nodeToMove = currentNode.deleteAt(oldIndex, 1);
+        let nodeToMove = currentNode.nodes.deleteAt(oldIndex, 1);
 
         // Find the new target...
         if (
@@ -180,7 +180,7 @@ export const applySlateOperations = (doc, operations) => {
         }
 
         // Insert the new node to its new parent.
-        currentNode.insertAt(newIndex, nodeToMove);
+        currentNode.nodes.insertAt(newIndex, nodeToMove);
         break;
     }
   })
