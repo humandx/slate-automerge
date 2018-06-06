@@ -140,7 +140,7 @@ export const applySlateOperations = (doc, operations) => {
         rest.forEach(el => {
           currentNode = currentNode.nodes[el];
         })
-        currentNode.insertAt(index, slateCustomToJson(node));
+        currentNode.nodes.insertAt(index, slateCustomToJson(node));
         break;
       case "remove_node":
         rest.forEach(el => {
