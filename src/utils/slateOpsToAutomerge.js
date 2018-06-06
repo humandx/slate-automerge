@@ -1,3 +1,11 @@
+/**
+ * This converts a Slate operation to operations that act on an Automerge
+ * document. This converts the functions in
+ * https://github.com/ianstormtaylor/slate/blob/master/packages/slate/src/operations/apply.js
+ * to modify the Automerge JSON instead of the Slate Value.
+ */
+
+
 import slateCustomToJson from "./slateCustomToJson"
 
 const allowedOperations = [
@@ -5,6 +13,12 @@ const allowedOperations = [
   "remove_node", "merge_node", "set_node", "move_node"
 ];
 
+/**
+ * @function applySlateOperations
+ * @desc converts a Slate operation to operations that act on an Automerge document
+ * @params doc the Automerge document
+ * @params operations a list of Slate Operations
+ */
 export const applySlateOperations = (doc, operations) => {
   operations.forEach(op => {
     if (allowedOperations.indexOf(op.type) == -1) {

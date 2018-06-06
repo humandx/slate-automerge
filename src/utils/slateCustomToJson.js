@@ -1,10 +1,16 @@
 /**
  * This contains a custom toJSON function for Slate objects intended to copy
- * exactly the Slate value.
- * Currently used for Slate-Automerge.
+ * exactly the Slate value. The code was modified from the toJSON() methods in
+ * https://github.com/ianstormtaylor/slate/tree/master/packages/slate/src/models
  */
 
 
+/**
+ * @function toJSON
+ * @desc Custom toJSON function for Slate data structures
+ * @params value a Slate node
+ * @params options current unused
+ */
 const toJSON = (value, options = {}) => {
 
     if (value === undefined || value === null) {
@@ -129,6 +135,11 @@ const OPERATION_ATTRIBUTES = {
   split_node: ['value', 'path', 'position', 'properties', 'target'],
 }
 
+/**
+ * @function operationJSON
+ * @desc Convert an Slate Operation into JSON. This is a copy of the
+ *     Operation.toJSON method except that it calls toJSON() in this file.
+ */
 const operationJSON = (valueOriginal, options = {}) => {
     const { object, type } = valueOriginal
     const json = { object, type }
@@ -204,6 +215,11 @@ const operationJSON = (valueOriginal, options = {}) => {
     return json
 }
 
+/**
+ * @function valueJSON
+ * @desc Convert an Slate Value into JSON. This is a copy of the Value.toJSON
+ *     method except that it calls toJSON() in this file.
+ */
 const valueJSON = (value, options = {}) => {
     const object = {
       object: value.object,

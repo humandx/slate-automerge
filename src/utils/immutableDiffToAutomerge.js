@@ -1,9 +1,24 @@
+/**
+ * This converts differences between two Slate values to operations that act on
+ * an Automerge document. This is a precursor to slateOpsToAutomerge.js
+ * and could be used in place of it. This is most likely slower since it
+ * creates more operations than slateOpsToAutomerge.
+ */
+
+
 import slateCustomToJson from "./slateCustomToJson"
 
 const getPath = (op) => {
     return op.get("path").split("/").slice(1,)
 }
 
+
+/**
+ * @function applyImmutableDiffOperations
+ * @desc Converts differences between two Slate documents into Automerge operations.
+ * @params doc the Automerge document
+ * @params differences the differences between the two Slate documents created by the intelie_diff diff function.
+ */
 export const applyImmutableDiffOperations = (doc, differences) => {
   differences.forEach(op => {
     var currentNode = doc.note;

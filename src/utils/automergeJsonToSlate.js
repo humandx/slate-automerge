@@ -1,10 +1,8 @@
 /**
  * This contains a custom fromJSON function for Automerge objects intended to
  * initialize as a Slate Value.
- * Currently used for Slate-Automerge.
+ * Currently NOT USED and shouldn't need to be used.
  */
-
-
 
 
 const fromJSON = (automergeJson) => {

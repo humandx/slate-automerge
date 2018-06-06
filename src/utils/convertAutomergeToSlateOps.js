@@ -1,3 +1,8 @@
+/**
+ * This converts Automerge operations to Slate operations.
+ */
+
+
 const automergeOpCreate = (op, objIdMap) => {
   switch (op.type) {
     case 'map':
@@ -209,6 +214,14 @@ const automergeOpInsertText = (deferredOps, objIdMap, pathMap, slateOps, prevPat
   })
 }
 
+/**
+ * @function convertAutomergeToSlateOps
+ * @desc Converts Automerge operations to Slate operations.
+ * @params automergeOps a list of Automerge operations created from Automerge.diff
+ * @params pathMap the map created by mapObjectIdToPath.js of the new Automerge document
+ * @params prevPathMap the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
+ * @params value the Slate Value
+ */
 export const convertAutomergeToSlateOps = (automergeOps, pathMap, prevPathMap, value) => {
   // To build objects from Automerge operations
   let slateOps = []

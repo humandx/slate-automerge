@@ -1,3 +1,9 @@
+/**
+ * This creates a map between the Automerge objectId and the path to the object.
+ * This is used to create Slate operations from Automerge operations.
+ */
+
+
 const SUPPORTED_SLATE_SET_OBJECTS = [
   'document',
   'block',
@@ -14,6 +20,13 @@ var path = require('../intelie_diff/path');
 var concatPath = path.concat, escape = path.escape;
 
 
+/**
+ * @function mapObjectIdToPath
+ * @desc Creates a map between the Automerge objectId and the path to the object.
+ * @params obj a node from an Automerge document
+ * @params p the path to the current node
+ * @params pathMap the mutable map to return
+ */
 export const mapObjectIdToPath = (obj, p, pathMap) => {
   let path = p || ''
   const isList = obj instanceof Array

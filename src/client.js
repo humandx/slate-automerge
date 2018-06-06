@@ -1,3 +1,7 @@
+/**
+ * The Slate client.
+ */
+
 import React from 'react'
 import Immutable from "immutable";
 import { Editor } from 'slate-react'
