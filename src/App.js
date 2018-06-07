@@ -1,4 +1,5 @@
 import React from 'react'
+import Immutable from "immutable";
 import { Value } from 'slate'
 import slateCustomToJson from "./utils/slateCustomToJson"
 import Automerge from 'automerge'
@@ -84,21 +85,27 @@ class App extends React.Component {
       });
     }
 
+    // Sync all clients.
     offlineSync = () => {
+      // Get all stored changes from all clients.
       let changesList = [];
       this.client.forEach((client, idx) => {
         changesList[idx] = client.getStoredLocalChanges();
       });
 
+      // Send all relevant changes to all clients.
       this.client.forEach((client, clientIdx) => {
+        let allChanges = Immutable.List();
         changesList.forEach((changes, changeIdx) => {
           if (clientIdx !== changeIdx) {
-            client.updateWithBatchedRemoteChanges(changes);
+            allChanges = allChanges.concat(changes);
           }
         });
+        client.updateWithBatchedRemoteChanges(allChanges);
       });
     }
 
+    // Broadcast a change from one client to all others.
     broadcast = (clientNumber, changes) => {
       this.client.forEach((client, idx) => {
         if (clientNumber !== idx) {
@@ -107,7 +114,12 @@ class App extends React.Component {
       })
     }
 
+    // Toggle if we should sync the clients online or offline.
     toggleOnline = () => {
+      // If going online from offline, make sure all clients are synced.
+      if (!this.state.online) {
+        this.offlineSync();
+      }
       this.setState({online: !this.state.online});
     }
 

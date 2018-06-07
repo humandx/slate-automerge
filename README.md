@@ -1,3 +1,25 @@
+## Installation instructions
+
+`yarn install` - to install all dependencies
+`yarn start` - to run the webserver
+
+## How to use
+
+After starting the development server, go to `http://localhost:3000` where you
+will see various number of clients. When the "CURRENTLY LIVE SYNCING" banner is
+up, all changes to any client will be broadcasted to all other clients. When the
+"CURRENTLY OFFLINE" banner is up, no changes are send until the "sync" button is
+clicked.
+
+## Behind the scenes
+
+## Known issues:
+Copy-paste
+
+
+
+## Original README below
+
 This project was bootstrapped with [Create React App](https://github.com/facebookincubator/create-react-app).
 
 Below you will find some information on how to perform common tasks.<br>
@@ -283,7 +305,7 @@ In the WebStorm menu `Run` select `Edit Configurations...`. Then click `+` and s
 
 Start your app by running `npm start`, then press `^D` on macOS or `F9` on Windows and Linux or click the green debug icon to start debugging in WebStorm.
 
-The same way you can debug your application in IntelliJ IDEA Ultimate, PhpStorm, PyCharm Pro, and RubyMine. 
+The same way you can debug your application in IntelliJ IDEA Ultimate, PhpStorm, PyCharm Pro, and RubyMine.
 
 ## Formatting Code Automatically
 
@@ -1769,7 +1791,7 @@ If you’re using [Apache HTTP Server](https://httpd.apache.org/), you need to c
     RewriteRule ^ index.html [QSA,L]
 ```
 
-It will get copied to the `build` folder when you run `npm run build`. 
+It will get copied to the `build` folder when you run `npm run build`.
 
 If you’re using [Apache Tomcat](http://tomcat.apache.org/), you need to follow [this Stack Overflow answer](https://stackoverflow.com/a/41249464/4878474).
 
