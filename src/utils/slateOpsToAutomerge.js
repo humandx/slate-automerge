@@ -166,7 +166,7 @@ export const applySlateOperations = (doc, operations) => {
         oldParentPath.forEach(el => {
           currentNode = currentNode.nodes[el];
         })
-        let nodeToMove;
+        let nodeToMove = currentNode.nodes[oldIndex];
 
         // Find the new target...
         if (
@@ -179,7 +179,7 @@ export const applySlateOperations = (doc, operations) => {
           oldIndex < newParentPath[oldParentPath.length]
         ) {
           // Remove the old node from it's current parent.
-          nodeToMove = currentNode.nodes.deleteAt(oldIndex, 1);
+          currentNode.nodes.deleteAt(oldIndex, 1);
 
           // Otherwise, if the old path removal resulted in the new path being no longer
           // correct, we need to decrement the new path at the old path's last index.
@@ -192,7 +192,7 @@ export const applySlateOperations = (doc, operations) => {
           currentNode.nodes.insertAt(newIndex, nodeToMove);
         } else {
           // Remove the old node from it's current parent.
-          nodeToMove = currentNode.nodes.deleteAt(oldIndex, 1);
+          currentNode.nodes.deleteAt(oldIndex, 1);
 
           // Otherwise, we can just grab the target normally...
           currentNode = doc.note;
