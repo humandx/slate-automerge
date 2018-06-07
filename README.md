@@ -1,6 +1,7 @@
 ## Installation instructions
 
 `yarn install` - to install all dependencies
+
 `yarn start` - to run the webserver
 
 ## How to use
@@ -13,10 +14,28 @@ clicked.
 
 ## Behind the scenes
 
+We keep two copies of the document: one in Slate's Immutable data structure
+(Slate Value) and one in Automerge's data structure (immutable JSON).
+
+Flow of when a change is made on Client A and broadcast to Client B:
+1) Change is made to Client A.
+2) The onChange function in Client A is fired.
+a) The Slate Value is stored on the client.
+b) The Slate Operations are transformed to Automerge JSON operations (in applySlateOperations) and applied to the Automerge document.
+c) If online, the Automerge changes (calculated by Automerge.getChanges) is broadcast to all other clients. If offline, the change is stored until the client goes online.
+
+3) Client B receives an event with the changes.
+a) Client B's Automerge document applies the changes from Client A.
+b) The differences between the Client B's new and old Automerge documents are computed (using Automerge.diff).
+c) The differences are converted to Slate Operations (in convertAutomergeToSlateOps) and applied to Client B's Slate Value.
+
 ## Known issues:
-Copy-paste
+Copy-paste causes an error
 
-
+## Questions / Notes / Optimizations todos
+1) Can we compute the output of Automerge.diff (step 3b) from the changes received (in 3)? This would allow us to avoid doing the Automerge.diff.
+2) We currently need to build an entire map of Automerge node objectIds to their path to associate them with a Slate node. Building this map takes alot of time and seems to be the primary slowdown for large documents (on my small sample size of 1).
+3) Why does copy-paste cause an error...
 
 ## Original README below
 
