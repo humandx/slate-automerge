@@ -104,7 +104,7 @@ export class Client extends React.Component {
       this.setState({ value: value })
 
       if (differences.size > 0) {
-
+        console.log("Automerge Doc: ", this.doc)
         // Using the difference obtained from the Immutable diff library,
         // apply the operations to the Automerge document.
         const docNew = Automerge.change(this.doc, `Client ${this.props.clientNumber}`, doc => {
@@ -112,8 +112,10 @@ export class Client extends React.Component {
           applySlateOperations(doc, operations)
         })
 
+        console.log("Slate ops: ", operations)
         // Get Automerge changes
         const changes = Automerge.getChanges(this.doc, docNew)
+        console.log("Automerge DocNew: ", docNew)
 
         // Update doc
         this.doc = docNew
