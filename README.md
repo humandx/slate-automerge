@@ -34,12 +34,13 @@ b) The differences between the Client B's new and old Automerge documents are co
 c) The differences are converted to Slate Operations (in convertAutomergeToSlateOps) and applied to Client B's Slate Value.
 
 ## Known issues:
-Copy-paste causes an error
+Simultaneously highlighting text and copy-pasting across multiple lines causes an error... in the example, do the following:
+- Highlight the last three 1s and first three 2nd
+- Copy then immediately paste it
 
 ## Questions / Notes / Optimizations todos
 1) Can we compute the output of Automerge.diff (step 3b) from the changes received (in 3)? This would allow us to avoid doing the Automerge.diff.
 2) We currently need to build an entire map of Automerge node objectIds to their path to associate them with a Slate node. Building this map takes alot of time and seems to be the primary slowdown for large documents (on my small sample size of 1).
-3) Why does copy-paste cause an error...
 
 ## Original README below
 
