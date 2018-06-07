@@ -95,8 +95,6 @@ export class Client extends React.Component {
 
       // Convert the changes from the Automerge document to Slate operations
       const slateOps = convertAutomergeToSlateOps(opSetDiff, this.pathMap, prevPathMap, currentValue)
-      console.log(`${this.props.clientNumber} slateOps`)
-      console.log(slateOps)
       const change = currentValue.change()
 
       // Apply the operation
@@ -110,12 +108,20 @@ export class Client extends React.Component {
 
       this.setState({ value: value })
 
+      // Run only if the Slate value has changed.
+      // For some reason, when I don't have this nearly trivial condition,
+      // the syncing doesn't work as I expect. I still need to investigate why.
       if (differences.size > 0) {
+
         console.log("Automerge Doc: ", this.doc)
-        // Using the difference obtained from the Immutable diff library,
-        // apply the operations to the Automerge document.
+
         const docNew = Automerge.change(this.doc, `Client ${this.props.clientNumber}`, doc => {
+          // Approach 1 which uses the difference between two Automerge documents
+          // to calculate the operations.
           // applyImmutableDiffOperations(doc, differences)
+
+          // Approach 2 which directly uses the Slate operations to modify the
+          // Automerge document.
           applySlateOperations(doc, operations)
         })
 
@@ -126,6 +132,9 @@ export class Client extends React.Component {
 
         // Update doc
         this.doc = docNew
+
+        // If online, broadcast changes to other clients.
+        // If offline, store changes.
         if (this.props.online) {
           this.props.broadcast(this.props.clientNumber, changes);
         } else {
