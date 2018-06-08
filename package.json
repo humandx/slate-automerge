@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "automerge": "^0.7.7",
+    "automerge": "file:./tmp/automerge/",
     "immutable": "^3.8.2",
     "immutablediff": "^0.4.4",
     "react": "^16.0.0",
