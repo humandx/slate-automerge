@@ -40,7 +40,7 @@ Simultaneously highlighting text and copy-pasting across multiple lines causes a
 
 ## Questions / Notes / Optimizations todos
 1) Can we compute the output of Automerge.diff (step 3b) from the changes received (in 3)? This would allow us to avoid doing the Automerge.diff.
-2) We currently need to build an entire map of Automerge node objectIds to their path to associate them with a Slate node. Building this map takes alot of time and seems to be the primary slowdown for large documents (on my small sample size of 1).
+2) We currently need to build an entire map of Automerge node objectIds to their path to associate them with a Slate node. Building this map takes alot of time and seems to be the primary slowdown for large documents (on my small sample size of 1). Can we have a function that returns the path to a node given the `objectId`?
 
 ## Original README below
 
