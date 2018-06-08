@@ -45,7 +45,10 @@ const initialValue = {
 
 let doc = Automerge.init();
 const initialSlateValue = Value.fromJSON(initialValue);
+const initialSlateValue0 = Value.fromJSON(initialValue);
+const initialSlateValue1 = Value.fromJSON(initialValue);
 const initialSlateValue2 = Value.fromJSON(initialValue);
+const initialSlateValue3 = Value.fromJSON(initialValue);
 console.log(slateCustomToJson(initialSlateValue.document))
 doc = Automerge.change(doc, 'Initialize Slate state', doc => {
   doc.note = slateCustomToJson(initialSlateValue.document);
@@ -147,7 +150,7 @@ class App extends React.Component {
                   clientNumber={0}
                   ref={(client) => {this.client[0] = client}}
                   savedAutomergeDoc={savedAutomergeDoc}
-                  initialSlateValue={initialSlateValue}
+                  initialSlateValue={initialSlateValue0}
                   broadcast={this.broadcast}
                   online={this.state.online}
               />
@@ -158,7 +161,29 @@ class App extends React.Component {
                   clientNumber={1}
                   ref={(client) => {this.client[1] = client}}
                   savedAutomergeDoc={savedAutomergeDoc}
+                  initialSlateValue={initialSlateValue1}
+                  broadcast={this.broadcast}
+                  online={this.state.online}
+              />
+            </div>
+            <div className="client">
+              <Client
+                  key={2}
+                  clientNumber={2}
+                  ref={(client) => {this.client[2] = client}}
+                  savedAutomergeDoc={savedAutomergeDoc}
                   initialSlateValue={initialSlateValue2}
+                  broadcast={this.broadcast}
+                  online={this.state.online}
+              />
+            </div>
+            <div className="client">
+              <Client
+                  key={3}
+                  clientNumber={3}
+                  ref={(client) => {this.client[3] = client}}
+                  savedAutomergeDoc={savedAutomergeDoc}
+                  initialSlateValue={initialSlateValue3}
                   broadcast={this.broadcast}
                   online={this.state.online}
               />
