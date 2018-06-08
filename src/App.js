@@ -112,7 +112,9 @@ class App extends React.Component {
     broadcast = (clientNumber, changes) => {
       this.client.forEach((client, idx) => {
         if (clientNumber !== idx) {
-          client.updateWithRemoteChanges(changes);
+          setTimeout(() => {
+            client.updateWithRemoteChanges(changes);
+          })
         }
       })
     }
