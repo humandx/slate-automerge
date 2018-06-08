@@ -16,8 +16,8 @@ const getPath = (op) => {
 /**
  * @function applyImmutableDiffOperations
  * @desc Converts differences between two Slate documents into Automerge operations.
- * @params doc the Automerge document
- * @params differences the differences between the two Slate documents created by the intelie_diff diff function.
+ * @param {Automerge.document} doc - the Automerge document
+ * @param {Array|Immutable.List} differences - the differences between the two Slate documents created by the intelie_diff diff function.
  */
 export const applyImmutableDiffOperations = (doc, differences) => {
   differences.forEach(op => {

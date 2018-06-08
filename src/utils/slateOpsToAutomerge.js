@@ -16,8 +16,8 @@ const allowedOperations = [
 /**
  * @function applySlateOperations
  * @desc converts a Slate operation to operations that act on an Automerge document
- * @params doc the Automerge document
- * @params operations a list of Slate Operations
+ * @param {Automerge.document} doc - the Automerge document
+ * @param {List} operations - a list of Slate Operations
  */
 export const applySlateOperations = (doc, operations) => {
   operations.forEach(op => {

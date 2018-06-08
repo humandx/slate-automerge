@@ -23,9 +23,9 @@ var concatPath = path.concat, escape = path.escape;
 /**
  * @function mapObjectIdToPath
  * @desc Creates a map between the Automerge objectId and the path to the object.
- * @params obj a node from an Automerge document
- * @params p the path to the current node
- * @params pathMap the mutable map to return
+ * @param {Automerge.document} obj - a node from an Automerge document
+ * @param {Array} p - the path to the current node
+ * @param {Object} pathMap - the mutable map to return
  */
 export const mapObjectIdToPath = (obj, p, pathMap) => {
   let path = p || ''
@@ -53,4 +53,10 @@ export const mapObjectIdToPath = (obj, p, pathMap) => {
   }
 
   return pathMap
+}
+
+export const updateObjectIdToPath = (slateOps, automergeDoc, path, pathMap) => {
+  slateOps.forEach((op) => {
+
+  })
 }

@@ -3,6 +3,12 @@
  */
 
 
+/**
+ * @function automergeOpCreate
+ * @desc Handles the `create` Automerge operation
+ * @param {Object} op - Automerge operation
+ * @param {Object} objIdMap - Map from the objectId to created object
+ */
 const automergeOpCreate = (op, objIdMap) => {
   switch (op.type) {
     case 'map':
@@ -17,6 +23,16 @@ const automergeOpCreate = (op, objIdMap) => {
   return objIdMap;
 }
 
+/**
+ * @function automergeOpRemove
+ * @desc Handles the `remove` Automerge operation
+ * @param {Object} op - Automerge operation
+ * @param {Object} objIdMap - Map from the objectId to created object
+ * @param {Array} slateOps - List of created Slate operations
+ * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
+ * @param {Value} value - the Slate Value
+ * @param {Object} prevPathMap - the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
+ */
 const automergeOpRemove = (op, objIdMap, slateOps, pathMap, value, prevPathMap) => {
     let pathString, slatePath, slateOp
     pathString = pathMap[op.obj]
@@ -65,6 +81,14 @@ const automergeOpRemove = (op, objIdMap, slateOps, pathMap, value, prevPathMap) 
     return slateOps;
 }
 
+/**
+ * @function automergeOpSet
+ * @desc Handles the `set` Automerge operation
+ * @param {Object} op - Automerge operation
+ * @param {Object} objIdMap - Map from the objectId to created object
+ * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
+ * @param {Object} prevPathMap - the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
+ */
 const automergeOpSet = (op, objIdMap, pathMap, prevPathMap) => {
     if (op.hasOwnProperty('link')) {
       // What's the point of the `link` field? All my experiments
@@ -89,6 +113,15 @@ const automergeOpSet = (op, objIdMap, pathMap, prevPathMap) => {
     return objIdMap;
 }
 
+/**
+ * @function automergeOpInsert
+ * @desc Handles the `insert` Automerge operation
+ * @param {Object} op - Automerge operation
+ * @param {Object} objIdMap - Map from the objectId to created object
+ * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
+ * @param {Array} deferredOps - a list of deferred operations to process
+ * @param {Object} prevPathMap - the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
+ */
 const automergeOpInsert = (op, objIdMap, pathMap, deferredOps, prevPathMap) => {
     if (op.link) {
       // Check if inserting into a newly created object or one that
@@ -111,6 +144,16 @@ const automergeOpInsert = (op, objIdMap, pathMap, deferredOps, prevPathMap) => {
     return {objIdMap, deferredOps};
 }
 
+/**
+ * @function automergeOpInsertText
+ * @desc Handles deferred operations
+ * @param {Array} deferredOps - a list of deferred operations to process
+ * @param {Object} objIdMap - Map from the objectId to created object
+ * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
+ * @param {Array} slateOps - List of created Slate operations
+ * @param {Object} prevPathMap - the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
+ * @param {Value} value - the Slate Value
+ */
 const automergeOpInsertText = (deferredOps, objIdMap, pathMap, slateOps, prevPathMap, value) => {
   // We know all ops in this list have the following conditions true:
   //  - op.action === `insert`
@@ -217,10 +260,10 @@ const automergeOpInsertText = (deferredOps, objIdMap, pathMap, slateOps, prevPat
 /**
  * @function convertAutomergeToSlateOps
  * @desc Converts Automerge operations to Slate operations.
- * @params automergeOps a list of Automerge operations created from Automerge.diff
- * @params pathMap the map created by mapObjectIdToPath.js of the new Automerge document
- * @params prevPathMap the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
- * @params value the Slate Value
+ * @param {Array} automergeOps - a list of Automerge operations created from Automerge.diff
+ * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
+ * @param {Object} prevPathMap - the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
+ * @param {Value} value - the Slate Value
  */
 export const convertAutomergeToSlateOps = (automergeOps, pathMap, prevPathMap, value) => {
   // To build objects from Automerge operations

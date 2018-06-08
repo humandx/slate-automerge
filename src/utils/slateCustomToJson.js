@@ -8,8 +8,8 @@
 /**
  * @function toJSON
  * @desc Custom toJSON function for Slate data structures
- * @params value a Slate node
- * @params options current unused
+ * @param {Slate.Node} value - a Slate node
+ * @param {Object} options - current unused
  */
 const toJSON = (value, options = {}) => {
 
