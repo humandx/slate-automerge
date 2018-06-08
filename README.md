@@ -1,6 +1,6 @@
 ## Installation instructions
 
-`yarn install` - to install all dependencies
+`./install_packages` - to install all dependencies. This installs all dependencies along with the path-from-root branch of Automerge which is also update to date with master.
 
 `yarn start` - to run the webserver
 
