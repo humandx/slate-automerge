@@ -29,13 +29,11 @@ const automergeOpCreate = (op, objIdMap) => {
  * @param {Object} op - Automerge operation
  * @param {Object} objIdMap - Map from the objectId to created object
  * @param {Array} slateOps - List of created Slate operations
- * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
  * @param {Value} value - the Slate Value
- * @param {Object} prevPathMap - the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
  */
-const automergeOpRemove = (op, objIdMap, slateOps, pathMap, value, prevPathMap) => {
+const automergeOpRemove = (op, objIdMap, slateOps, value) => {
     let pathString, slatePath, slateOp
-    pathString = pathMap[op.obj]
+    pathString = op.path.slice(1).join("/")
     if (pathString) {
       pathString = pathString.match(/\d+/g)
     } else {
@@ -87,9 +85,8 @@ const automergeOpRemove = (op, objIdMap, slateOps, pathMap, value, prevPathMap) 
  * @param {Object} op - Automerge operation
  * @param {Object} objIdMap - Map from the objectId to created object
  * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
- * @param {Object} prevPathMap - the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
  */
-const automergeOpSet = (op, objIdMap, pathMap, prevPathMap) => {
+const automergeOpSet = (op, objIdMap, pathMap) => {
     if (op.hasOwnProperty('link')) {
       // What's the point of the `link` field? All my experiments
       // have `link` = true
@@ -120,9 +117,8 @@ const automergeOpSet = (op, objIdMap, pathMap, prevPathMap) => {
  * @param {Object} objIdMap - Map from the objectId to created object
  * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
  * @param {Array} deferredOps - a list of deferred operations to process
- * @param {Object} prevPathMap - the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
  */
-const automergeOpInsert = (op, objIdMap, pathMap, deferredOps, prevPathMap) => {
+const automergeOpInsert = (op, objIdMap, pathMap, deferredOps) => {
     if (op.link) {
       // Check if inserting into a newly created object or one that
       // already exists in our Automerge document
@@ -149,25 +145,21 @@ const automergeOpInsert = (op, objIdMap, pathMap, deferredOps, prevPathMap) => {
  * @desc Handles deferred operations
  * @param {Array} deferredOps - a list of deferred operations to process
  * @param {Object} objIdMap - Map from the objectId to created object
- * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
  * @param {Array} slateOps - List of created Slate operations
  * @param {Object} prevPathMap - the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
  * @param {Value} value - the Slate Value
  */
-const automergeOpInsertText = (deferredOps, objIdMap, pathMap, slateOps, prevPathMap, value) => {
+const automergeOpInsertText = (deferredOps, objIdMap, slateOps, prevPathMap, value) => {
   // We know all ops in this list have the following conditions true:
   //  - op.action === `insert`
   //  - pathMap.hasOwnProperty(op.obj)
   //  - typeof pathMap[op.obj] === 'string' ||
   //    pathMap[op.obj] instanceof String
   deferredOps.map(op => {
-    const insertInto = pathMap[op.obj]
+    const insertInto = op.path.slice(1).join("/")
 
     let pathString, slatePath
     let slateOp
-
-    let oldPathValue = prevPathMap[op.value]
-    let newPathValue = pathMap[op.value]
 
     // If the `pathString` is available, then we are likely inserting text
     // FIXME: Verify this
@@ -187,6 +179,9 @@ const automergeOpInsertText = (deferredOps, objIdMap, pathMap, slateOps, prevPat
           marks: objIdMap[op.value].marks
         }
       } else {
+        // We need prevPathMap to get the information from the list.
+        // Automerge uses the objectId as the reference but we need to use the
+        // old path (or key) to get the reference to the Slate node.
         let prevPath = prevPathMap[op.value];
         const rightEnd = prevPath.indexOf("characters")
         prevPath = prevPath.slice(0,rightEnd)
@@ -277,13 +272,13 @@ export const convertAutomergeToSlateOps = (automergeOps, pathMap, prevPathMap, v
         objIdMap = automergeOpCreate(op, objIdMap);
         break;
       case "remove":
-        slateOps = automergeOpRemove(op, objIdMap, slateOps, pathMap, value, prevPathMap);
+        slateOps = automergeOpRemove(op, objIdMap, slateOps, value);
         break;
       case "set":
-        objIdMap = automergeOpSet(op, objIdMap, pathMap, prevPathMap);
+        objIdMap = automergeOpSet(op, objIdMap, pathMap);
         break;
       case "insert":
-        let temp = automergeOpInsert(op, objIdMap, pathMap, deferredOps, prevPathMap);
+        let temp = automergeOpInsert(op, objIdMap, pathMap, deferredOps);
         objIdMap = temp.objIdMap;
         deferredOps = temp.deferredOps;
         break;
@@ -291,7 +286,7 @@ export const convertAutomergeToSlateOps = (automergeOps, pathMap, prevPathMap, v
   })
 
   if (deferredOps) {
-    automergeOpInsertText(deferredOps, objIdMap, pathMap, slateOps, prevPathMap, value);
+    automergeOpInsertText(deferredOps, objIdMap, slateOps, prevPathMap, value);
   }
   return slateOps;
 }
