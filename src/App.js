@@ -49,7 +49,6 @@ const initialSlateValue0 = Value.fromJSON(initialValue);
 const initialSlateValue1 = Value.fromJSON(initialValue);
 const initialSlateValue2 = Value.fromJSON(initialValue);
 const initialSlateValue3 = Value.fromJSON(initialValue);
-console.log(slateCustomToJson(initialSlateValue.document))
 doc = Automerge.change(doc, 'Initialize Slate state', doc => {
   doc.note = slateCustomToJson(initialSlateValue.document);
 })

@@ -131,8 +131,6 @@ export class Client extends React.Component {
       // the syncing doesn't work as I expect. I still need to investigate why.
       if (differences.size > 0) {
 
-        console.log("Automerge Doc: ", this.doc)
-
         const docNew = Automerge.change(this.doc, `Client ${this.props.clientNumber}`, doc => {
           // Approach 1 which uses the difference between two Automerge documents
           // to calculate the operations.
@@ -143,10 +141,8 @@ export class Client extends React.Component {
           applySlateOperations(doc, operations)
         })
 
-        console.log("Slate ops: ", operations)
         // Get Automerge changes
         const changes = Automerge.getChanges(this.doc, docNew)
-        console.log("Automerge DocNew: ", docNew)
 
         // Update doc
         this.doc = docNew
