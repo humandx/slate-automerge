@@ -84,9 +84,8 @@ const automergeOpRemove = (op, objIdMap, slateOps, value) => {
  * @desc Handles the `set` Automerge operation
  * @param {Object} op - Automerge operation
  * @param {Object} objIdMap - Map from the objectId to created object
- * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
  */
-const automergeOpSet = (op, objIdMap, pathMap) => {
+const automergeOpSet = (op, objIdMap) => {
     if (op.hasOwnProperty('link')) {
       // What's the point of the `link` field? All my experiments
       // have `link` = true
@@ -95,11 +94,7 @@ const automergeOpSet = (op, objIdMap, pathMap) => {
         // already exists in our Automerge document
         if (objIdMap.hasOwnProperty(op.value)) {
           objIdMap[op.obj][op.key] = objIdMap[op.value]
-        }
-        else if (pathMap.hasOwnProperty(op.value)) {
-          objIdMap[op.obj][op.key] = pathMap[op.value]
-        }
-        else {
+        } else {
           // TODO: Does this ever happen?
           console.error('`set`, unable to find objectId: ', op.value)
         }
@@ -118,20 +113,22 @@ const automergeOpSet = (op, objIdMap, pathMap) => {
  * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
  * @param {Array} deferredOps - a list of deferred operations to process
  */
-const automergeOpInsert = (op, objIdMap, pathMap, deferredOps) => {
+const automergeOpInsert = (op, objIdMap, deferredOps) => {
     if (op.link) {
       // Check if inserting into a newly created object or one that
       // already exists in our Automerge document
       if (objIdMap.hasOwnProperty(op.obj)) {
         objIdMap[op.obj][op.index] = objIdMap[op.value]
-      }
-      else if (pathMap.hasOwnProperty(op.obj)) {
+      } else {
         deferredOps.push(op)
       }
-      else {
-        // TODO: Does this ever happen?
-        console.error('`insert`, unable to find objectId: ', op.obj)
-      }
+      // else if (pathMap.hasOwnProperty(op.obj)) {
+      //   deferredOps.push(op)
+      // }
+      // else {
+      //   // TODO: Does this ever happen?
+      //   console.error('`insert`, unable to find objectId: ', op.obj)
+      // }
     }
     else {
       // TODO: Does this ever happen?
@@ -146,10 +143,9 @@ const automergeOpInsert = (op, objIdMap, pathMap, deferredOps) => {
  * @param {Array} deferredOps - a list of deferred operations to process
  * @param {Object} objIdMap - Map from the objectId to created object
  * @param {Array} slateOps - List of created Slate operations
- * @param {Object} prevPathMap - the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
  * @param {Value} value - the Slate Value
  */
-const automergeOpInsertText = (deferredOps, objIdMap, slateOps, prevPathMap, value) => {
+const automergeOpInsertText = (deferredOps, objIdMap, slateOps, value) => {
   // We know all ops in this list have the following conditions true:
   //  - op.action === `insert`
   //  - pathMap.hasOwnProperty(op.obj)
@@ -177,32 +173,6 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps, prevPathMap, val
           offset: op.index,
           text: objIdMap[op.value].text,
           marks: objIdMap[op.value].marks
-        }
-      } else {
-        // We need prevPathMap to get the information from the list.
-        // Automerge uses the objectId as the reference but we need to use the
-        // old path (or key) to get the reference to the Slate node.
-        let prevPath = prevPathMap[op.value];
-        const rightEnd = prevPath.indexOf("characters")
-        prevPath = prevPath.slice(0,rightEnd)
-        pathString = prevPath.match(/\d+/g)
-        let oldSlatePath = pathString.map(x => {
-          return parseInt(x, 10);
-        });
-
-        let prevIndex = prevPathMap[op.value].slice(rightEnd)
-        let pathIndex = prevIndex.match(/\d+/g)
-        let oldSlateIndex = pathIndex.map(x => {
-          return parseInt(x, 10);
-        })[0];
-        let character = value.document.getNodeAtPath(oldSlatePath).characters.get(oldSlateIndex)
-
-        slateOp = {
-          type: 'insert_text',
-          path: slatePath,
-          offset: op.index,
-          text: character.text,
-          marks: character.marks
         }
       }
     }
@@ -257,10 +227,9 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps, prevPathMap, val
  * @desc Converts Automerge operations to Slate operations.
  * @param {Array} automergeOps - a list of Automerge operations created from Automerge.diff
  * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
- * @param {Object} prevPathMap - the map created by mapObjectIdToPath.js of the previous Automerge document (before the operations)
  * @param {Value} value - the Slate Value
  */
-export const convertAutomergeToSlateOps = (automergeOps, pathMap, prevPathMap, value) => {
+export const convertAutomergeToSlateOps = (automergeOps, value) => {
   // To build objects from Automerge operations
   let slateOps = []
   let objIdMap = {}
@@ -275,10 +244,10 @@ export const convertAutomergeToSlateOps = (automergeOps, pathMap, prevPathMap, v
         slateOps = automergeOpRemove(op, objIdMap, slateOps, value);
         break;
       case "set":
-        objIdMap = automergeOpSet(op, objIdMap, pathMap);
+        objIdMap = automergeOpSet(op, objIdMap);
         break;
       case "insert":
-        let temp = automergeOpInsert(op, objIdMap, pathMap, deferredOps);
+        let temp = automergeOpInsert(op, objIdMap, deferredOps);
         objIdMap = temp.objIdMap;
         deferredOps = temp.deferredOps;
         break;
@@ -286,7 +255,7 @@ export const convertAutomergeToSlateOps = (automergeOps, pathMap, prevPathMap, v
   })
 
   if (deferredOps) {
-    automergeOpInsertText(deferredOps, objIdMap, slateOps, prevPathMap, value);
+    automergeOpInsertText(deferredOps, objIdMap, slateOps, value);
   }
   return slateOps;
 }

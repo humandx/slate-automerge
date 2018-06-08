@@ -10,7 +10,6 @@ import diff from './intelie_diff/diff'
 import { applyImmutableDiffOperations } from "./utils/immutableDiffToAutomerge"
 import { applySlateOperations } from "./utils/slateOpsToAutomerge"
 import { convertAutomergeToSlateOps } from "./utils/convertAutomergeToSlateOps"
-import { mapObjectIdToPath } from "./utils/mapObjectId"
 import Automerge from 'automerge'
 
 
@@ -21,7 +20,6 @@ export class Client extends React.Component {
 
       this.onChange = this.onChange.bind(this)
       this.doc = Automerge.load(this.props.savedAutomergeDoc)
-      this.buildObjectIdMap = this.buildObjectIdMap.bind(this)
       this.pathMap = null;
 
       // const initialValue = automergeJsontoSlate({
@@ -37,10 +35,6 @@ export class Client extends React.Component {
         online: true,
         docOfflineHistory: Immutable.List(),
       }
-    }
-
-    componentDidMount = () => {
-      this.buildObjectIdMap()
     }
 
     /**
@@ -115,10 +109,10 @@ export class Client extends React.Component {
      */
     updateWithAutomergeOperations = (currentValue, opSetDiff) => {
       // Get the map between objectId and paths
-      this.buildObjectIdMap();
+      // this.buildObjectIdMap();
 
       // Convert the changes from the Automerge document to Slate operations
-      const slateOps = convertAutomergeToSlateOps(opSetDiff, this.pathMap, this.prevPathMap, currentValue)
+      const slateOps = convertAutomergeToSlateOps(opSetDiff, currentValue)
       const change = currentValue.change()
 
       // Apply the operation
@@ -170,22 +164,6 @@ export class Client extends React.Component {
           })
         }
       }
-    }
-
-    /*********************
-     * UTILITY FUNCTIONS *
-     *********************/
-    /**
-     * @function buildObjectIdMap
-     * @desc Build the map of Automerge objectId to paths
-     */
-    //
-    buildObjectIdMap = () => {
-      this.prevPathMap = this.pathMap
-      const history = Automerge.getHistory(this.doc)
-      const snapshot = history[history.length - 1].snapshot.note
-      this.pathMap = mapObjectIdToPath(snapshot, null, {})
-      return this.pathMap;
     }
 
     /*****************
