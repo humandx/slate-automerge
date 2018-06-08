@@ -2,6 +2,8 @@
  * This contains a custom toJSON function for Slate objects intended to copy
  * exactly the Slate value. The code was modified from the toJSON() methods in
  * https://github.com/ianstormtaylor/slate/tree/master/packages/slate/src/models
+ * This should not be needed once the PR related to
+ * https://github.com/ianstormtaylor/slate/issues/1813 is completed.
  */
 
 
