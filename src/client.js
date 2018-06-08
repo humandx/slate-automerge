@@ -115,11 +115,10 @@ export class Client extends React.Component {
      */
     updateWithAutomergeOperations = (currentValue, opSetDiff) => {
       // Get the map between objectId and paths
-      let prevPathMap = this.pathMap;
       this.buildObjectIdMap();
 
       // Convert the changes from the Automerge document to Slate operations
-      const slateOps = convertAutomergeToSlateOps(opSetDiff, this.pathMap, prevPathMap, currentValue)
+      const slateOps = convertAutomergeToSlateOps(opSetDiff, this.pathMap, this.prevPathMap, currentValue)
       const change = currentValue.change()
 
       // Apply the operation
@@ -182,6 +181,7 @@ export class Client extends React.Component {
      */
     //
     buildObjectIdMap = () => {
+      this.prevPathMap = this.pathMap
       const history = Automerge.getHistory(this.doc)
       const snapshot = history[history.length - 1].snapshot.note
       this.pathMap = mapObjectIdToPath(snapshot, null, {})
