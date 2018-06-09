@@ -1,10 +1,9 @@
 /**
  * This contains a custom fromJSON function for Automerge objects intended to
  * initialize as a Slate Value.
- * Currently used for Slate-Automerge.
+ * This will not be needed once the PR related to
+ * https://github.com/ianstormtaylor/slate/issues/1813 is completed.
  */
-
-
 
 
 const fromJSON = (automergeJson) => {
@@ -19,6 +18,7 @@ const fromJSON = (automergeJson) => {
             // slate/packages/slate/src/models/text.js -> toJSON() and getLeaves()
             break;
         default;
+
             break;
     }
 }

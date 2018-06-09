@@ -1,10 +1,18 @@
 /**
  * This contains a custom toJSON function for Slate objects intended to copy
- * exactly the Slate value.
- * Currently used for Slate-Automerge.
+ * exactly the Slate value. The code was modified from the toJSON() methods in
+ * https://github.com/ianstormtaylor/slate/tree/master/packages/slate/src/models
+ * This should not be needed once the PR related to
+ * https://github.com/ianstormtaylor/slate/issues/1813 is completed.
  */
 
 
+/**
+ * @function toJSON
+ * @desc Custom toJSON function for Slate data structures
+ * @param {Slate.Node} value - a Slate node
+ * @param {Object} options - current unused
+ */
 const toJSON = (value, options = {}) => {
 
     if (value === undefined || value === null) {
@@ -21,7 +29,6 @@ const toJSON = (value, options = {}) => {
               nodes: value.nodes.toArray().map(n => toJSON(n, options)),
               type: value.type,
             }
-            break;
         case "character":
             return {
               object: value.object,
@@ -36,7 +43,6 @@ const toJSON = (value, options = {}) => {
               data: toJSON(value.data, options),
               nodes: value.nodes.toArray().map(n => toJSON(n, options)),
             }
-            break;
         case "history":
             return {
               object: value.object,
@@ -129,6 +135,11 @@ const OPERATION_ATTRIBUTES = {
   split_node: ['value', 'path', 'position', 'properties', 'target'],
 }
 
+/**
+ * @function operationJSON
+ * @desc Convert an Slate Operation into JSON. This is a copy of the
+ *     Operation.toJSON method except that it calls toJSON() in this file.
+ */
 const operationJSON = (valueOriginal, options = {}) => {
     const { object, type } = valueOriginal
     const json = { object, type }
@@ -142,7 +153,7 @@ const operationJSON = (valueOriginal, options = {}) => {
       if (key === 'document') continue
       if (key === 'selection') continue
       if (key === 'value') continue
-      if (key === 'node' && type != 'insert_node') continue
+      if (key === 'node' && type !== 'insert_node') continue
 
       if (key === 'mark' || key === 'marks' || key === 'node') {
         value = toJSON(value, options)
@@ -204,6 +215,11 @@ const operationJSON = (valueOriginal, options = {}) => {
     return json
 }
 
+/**
+ * @function valueJSON
+ * @desc Convert an Slate Value into JSON. This is a copy of the Value.toJSON
+ *     method except that it calls toJSON() in this file.
+ */
 const valueJSON = (value, options = {}) => {
     const object = {
       object: value.object,
