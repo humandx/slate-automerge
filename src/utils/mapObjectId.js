@@ -16,7 +16,7 @@ const SUPPORTED_SLATE_PATH_OBJECTS = [
   'characters'
 ]
 
-var path = require('../intelie_diff/path');
+var path = require('./path');
 var concatPath = path.concat, escape = path.escape;
 
 
