@@ -29,7 +29,6 @@ const toJSON = (value, options = {}) => {
               nodes: value.nodes.toArray().map(n => toJSON(n, options)),
               type: value.type,
             }
-            break;
         case "character":
             return {
               object: value.object,
@@ -44,7 +43,6 @@ const toJSON = (value, options = {}) => {
               data: toJSON(value.data, options),
               nodes: value.nodes.toArray().map(n => toJSON(n, options)),
             }
-            break;
         case "history":
             return {
               object: value.object,
@@ -155,7 +153,7 @@ const operationJSON = (valueOriginal, options = {}) => {
       if (key === 'document') continue
       if (key === 'selection') continue
       if (key === 'value') continue
-      if (key === 'node' && type != 'insert_node') continue
+      if (key === 'node' && type !== 'insert_node') continue
 
       if (key === 'mark' || key === 'marks' || key === 'node') {
         value = toJSON(value, options)

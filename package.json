@@ -10,7 +10,6 @@
     "react-dom": "^16.0.0",
     "react-scripts": "1.0.14",
     "slate": "^0.33.6",
-    "slate-diff": "git://github.com/nathanfu88/slatediff.git",
     "slate-react": "^0.12.4"
   },
   "scripts": {

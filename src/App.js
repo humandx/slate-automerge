@@ -5,9 +5,6 @@ import slateCustomToJson from "./utils/slateCustomToJson"
 import Automerge from 'automerge'
 import { Client } from "./client"
 
-var path = require('./intelie_diff/path');
-var concatPath = path.concat, escape = path.escape;
-
 const initialValue = {
   document: {
     nodes: [

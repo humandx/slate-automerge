@@ -21,11 +21,11 @@ const getPath = (op) => {
  */
 export const applyImmutableDiffOperations = (doc, differences) => {
   differences.forEach(op => {
-    var currentNode = doc.note;
-    var path = getPath(op);;
-    var nodesExceptLast = path.slice(0, -1);;
-    var lastNode = path.slice(-1);;
-    var data;
+    let currentNode = doc.note;
+    let path = getPath(op);
+    let nodesExceptLast = path.slice(0, -1);
+    let lastNode = path.slice(-1);
+    let data;
 
     // Move pointer of currentNode to last possible reference before
     // we do the insertion, replacement or deletion.
@@ -33,18 +33,18 @@ export const applyImmutableDiffOperations = (doc, differences) => {
       currentNode = currentNode[el];
     })
 
-    if (op.get("op") == "add") {
+    if (op.get("op") === "add") {
       // Operation inserts an element into a list or map.
       data = slateCustomToJson(op.get("value"));
       lastNode = !isNaN(lastNode) ? parseInt(lastNode) : lastNode;
       currentNode.insertAt(lastNode, data);
     }
-    if (op.get("op") == "replace") {
+    if (op.get("op") === "replace") {
       // Operation replaces an element in a list or map.
       data = op.get("value");
       currentNode[lastNode] = data;
     }
-    if (op.get("op") == "remove") {
+    if (op.get("op") === "remove") {
       // Operation removes an element from a list or map.
       currentNode.deleteAt(parseInt(lastNode));
     }

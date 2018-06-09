@@ -16,8 +16,8 @@ const SUPPORTED_SLATE_PATH_OBJECTS = [
   'characters'
 ]
 
-var path = require('./path');
-var concatPath = path.concat, escape = path.escape;
+let path = require('./path');
+let concatPath = path.concat, escape = path.escape;
 
 
 /**
@@ -33,7 +33,7 @@ export const mapObjectIdToPath = (obj, p, pathMap) => {
 
   // Iterate object keys instead
   if (!isList) {
-    for (var key in obj) {
+    for (let key in obj) {
       if (obj.hasOwnProperty(key)) {
         if (SUPPORTED_SLATE_PATH_OBJECTS.includes(key)) {
           const thisPath = concatPath(path, escape(key))

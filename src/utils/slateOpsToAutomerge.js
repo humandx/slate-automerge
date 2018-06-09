@@ -21,7 +21,7 @@ const allowedOperations = [
  */
 export const applySlateOperations = (doc, operations) => {
   operations.forEach(op => {
-    if (allowedOperations.indexOf(op.type) == -1) {
+    if (allowedOperations.indexOf(op.type) === -1) {
       return;
     }
     const {
@@ -31,7 +31,6 @@ export const applySlateOperations = (doc, operations) => {
     const index = path[path.length - 1];
     const rest = path.slice(0, -1)
     let currentNode = doc.note;
-    let characters;
     switch (op.type) {
       case "add_mark":
         // Untested
@@ -42,7 +41,7 @@ export const applySlateOperations = (doc, operations) => {
           if (i < offset) return;
           if (i >= offset + length) return;
           const hasMark = char.marks.find((charMark) => {
-            return charMark.type == mark.type
+            return charMark.type === mark.type
           })
           if (!hasMark) {
             char.marks.push(mark)
@@ -58,7 +57,7 @@ export const applySlateOperations = (doc, operations) => {
           if (i < offset) return;
           if (i >= offset + length) return;
           const markIndex = char.marks.findIndex((charMark) => {
-            return charMark.type == mark.type
+            return charMark.type === mark.type
           })
           if (markIndex) {
             char.marks.deleteAt(markIndex, 1);
@@ -74,7 +73,7 @@ export const applySlateOperations = (doc, operations) => {
           if (i < offset) return;
           if (i >= offset + length) return;
           const markIndex = char.marks.findIndex((charMark) => {
-            return charMark.type == mark.type
+            return charMark.type === mark.type
           })
           if (markIndex) {
             char.marks[markIndex] = mark;
@@ -104,7 +103,7 @@ export const applySlateOperations = (doc, operations) => {
         })
         let childOne = currentNode.nodes[index];
         let childTwo = JSON.parse(JSON.stringify(currentNode.nodes[index]));
-        if (childOne.object == "text") {
+        if (childOne.object === "text") {
           childOne.characters.splice(position)
           childTwo.characters.splice(0, position)
         } else {
@@ -129,7 +128,7 @@ export const applySlateOperations = (doc, operations) => {
         })
         let one = currentNode.nodes[index - 1];
         let two = currentNode.nodes[index];
-        if (one.object == "text") {
+        if (one.object === "text") {
           // This is to strip out the objectId and create a new list.
           // Not ideal at all but Slate can't do the linking that Automerge can
           // and it's alot of work to try to move references in Slate.
@@ -211,6 +210,9 @@ export const applySlateOperations = (doc, operations) => {
           currentNode.nodes.insertAt(newIndex, nodeToMove);
 
         }
+        break;
+      default:
+        console.log("In default case")
         break;
     }
   })

@@ -1,5 +1,5 @@
 # Clear old packages
-rm -Rf node_modules/ tmp/
+rm -Rf node_modules/ tmp/ yarn.lock
 
 # Make tmp directory for custom git repos
 mkdir -p tmp

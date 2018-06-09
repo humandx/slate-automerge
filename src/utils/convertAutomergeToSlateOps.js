@@ -151,7 +151,7 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps, value) => {
   //  - pathMap.hasOwnProperty(op.obj)
   //  - typeof pathMap[op.obj] === 'string' ||
   //    pathMap[op.obj] instanceof String
-  deferredOps.map(op => {
+  deferredOps.forEach(op => {
     const insertInto = op.path.slice(1).join("/")
 
     let pathString, slatePath
@@ -159,7 +159,6 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps, value) => {
 
     // If the `pathString` is available, then we are likely inserting text
     // FIXME: Verify this
-    let newValue = value;
     pathString = insertInto.match(/\d+/g)
     if (pathString) {
       slatePath = pathString.map(x => {
@@ -175,8 +174,7 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps, value) => {
           marks: objIdMap[op.value].marks
         }
       }
-    }
-    else {
+    } else {
       // FIXME: Is `op.index` always the right path? What happens in a
       // sub-node?
       slatePath = [op.index]
@@ -235,7 +233,7 @@ export const convertAutomergeToSlateOps = (automergeOps, value) => {
   let objIdMap = {}
   let deferredOps = []
 
-  automergeOps.map(op => {
+  automergeOps.forEach(op => {
     switch (op.action) {
       case "create":
         objIdMap = automergeOpCreate(op, objIdMap);
@@ -250,6 +248,8 @@ export const convertAutomergeToSlateOps = (automergeOps, value) => {
         let temp = automergeOpInsert(op, objIdMap, deferredOps);
         objIdMap = temp.objIdMap;
         deferredOps = temp.deferredOps;
+        break;
+      default:
         break;
     }
   })
