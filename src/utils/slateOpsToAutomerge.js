@@ -3,6 +3,14 @@
  * document. This converts the functions in
  * https://github.com/ianstormtaylor/slate/blob/master/packages/slate/src/operations/apply.js
  * to modify the Automerge JSON instead of the Slate Value.
+ *
+ * NOTE: The move operation in Slate is a linking op in Automerge. For now, to
+ * simplify the conversion from Automerge operationsto Slate, rather than move,
+ * we delete the node and re-insert a new node. This results in more Automerge
+ * ops but makes it so that the reverse conversion
+ * (in convertAutomerge.automergeOpInsertText) does not need to know the path
+ * to the previous node. If we update Automerge to contain the path to the
+ * old node, we can use the move node operation.
  */
 
 
@@ -132,12 +140,14 @@ export const applySlateOperations = (doc, operations) => {
           // TOFIX: This is to strip out the objectId and create a new list.
           // Not ideal at all but Slate can't do the linking that Automerge can
           // and it's alot of work to try to move references in Slate.
+          // See Note above.
           let temp = JSON.parse(JSON.stringify(two.characters))
           one.characters.push(...temp)
         } else {
           // TOFIX: This is to strip out the objectId and create a new list.
           // Not ideal at all but Slate can't do the linking that Automerge can
           // and it's alot of work to try to move references in Slate.
+          // See Note above.
           let temp = JSON.parse(JSON.stringify(two.nodes))
           one.nodes.push(...temp)
         }
@@ -199,6 +209,7 @@ export const applySlateOperations = (doc, operations) => {
           // TOFIX: This is to strip out the objectId and create a new list.
           // Not ideal at all but Slate can't do the linking that Automerge can
           // and it's alot of work to try to move references in Slate.
+          // See Note above.
           nodeToMove = JSON.parse(JSON.stringify(nodeToMove));
           // Insert the new node to its new parent.
           currentNode.nodes.insertAt(newIndex, nodeToMove);
@@ -215,6 +226,7 @@ export const applySlateOperations = (doc, operations) => {
           // TOFIX: This is to strip out the objectId and create a new list.
           // Not ideal at all but Slate can't do the linking that Automerge can
           // and it's alot of work to try to move references in Slate.
+          // See Note above.
           nodeToMove = JSON.parse(JSON.stringify(nodeToMove));
           // Insert the new node to its new parent.
           currentNode.nodes.insertAt(newIndex, nodeToMove);

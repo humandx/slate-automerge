@@ -55,7 +55,7 @@ const automergeOpRemove = (op, objIdMap, slateOps, value) => {
     // Validate the operation using the node type at path given by `op.obj`
     // FIXME: Is the Slate's Value reliable enough to get the node type?
     // Use the document to be changed
-    const removeNode = value.document.getNodeAtPath(slatePath)
+    let removeNode = value.document.getNodeAtPath(slatePath)
     switch (removeNode.object) {
       case 'text':
         slateOp = {
@@ -67,9 +67,10 @@ const automergeOpRemove = (op, objIdMap, slateOps, value) => {
         }
         break;
       case 'block':
+        removeNode = removeNode.nodes.get(op.index)
         slateOp = {
           type: 'remove_node',
-          path: slatePath,
+          path: [...slatePath, op.index],
           node: removeNode
         }
         break;
