@@ -129,13 +129,13 @@ export const applySlateOperations = (doc, operations) => {
         let one = currentNode.nodes[index - 1];
         let two = currentNode.nodes[index];
         if (one.object === "text") {
-          // This is to strip out the objectId and create a new list.
+          // TOFIX: This is to strip out the objectId and create a new list.
           // Not ideal at all but Slate can't do the linking that Automerge can
           // and it's alot of work to try to move references in Slate.
           let temp = JSON.parse(JSON.stringify(two.characters))
           one.characters.push(...temp)
         } else {
-          // This is to strip out the objectId and create a new list.
+          // TOFIX: This is to strip out the objectId and create a new list.
           // Not ideal at all but Slate can't do the linking that Automerge can
           // and it's alot of work to try to move references in Slate.
           let temp = JSON.parse(JSON.stringify(two.nodes))
@@ -195,6 +195,11 @@ export const applySlateOperations = (doc, operations) => {
           newParentPath.forEach(el => {
             currentNode = currentNode.nodes[el];
           })
+
+          // TOFIX: This is to strip out the objectId and create a new list.
+          // Not ideal at all but Slate can't do the linking that Automerge can
+          // and it's alot of work to try to move references in Slate.
+          nodeToMove = JSON.parse(JSON.stringify(nodeToMove));
           // Insert the new node to its new parent.
           currentNode.nodes.insertAt(newIndex, nodeToMove);
         } else {
@@ -206,6 +211,11 @@ export const applySlateOperations = (doc, operations) => {
           newParentPath.forEach(el => {
             currentNode = currentNode.nodes[el];
           })
+
+          // TOFIX: This is to strip out the objectId and create a new list.
+          // Not ideal at all but Slate can't do the linking that Automerge can
+          // and it's alot of work to try to move references in Slate.
+          nodeToMove = JSON.parse(JSON.stringify(nodeToMove));
           // Insert the new node to its new parent.
           currentNode.nodes.insertAt(newIndex, nodeToMove);
 

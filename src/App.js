@@ -5,40 +5,45 @@ import slateCustomToJson from "./utils/slateCustomToJson"
 import Automerge from 'automerge'
 import { Client } from "./client"
 
+
 const initialValue = {
-  document: {
-    nodes: [
-      {
-        object: 'block',
-        type: 'paragraph',
-        nodes: [
-          {
-            object: 'text',
-            leaves: [
-              {
-                text: '111111'
-              }
-            ]
-          }
+    "document": {
+        "nodes": [
+            {
+                "object": "block",
+                "type": "ul_list",
+                "data": {
+                    "style": {
+                        "listStyleType": "disc"
+                    }
+                },
+                "nodes": [
+                    {
+                        "object": "block",
+                        "type": "list_item",
+                        "nodes": [
+                            {
+                                "object": "block",
+                                "type": "paragraph",
+                                "nodes": [
+                                    {
+                                        "object": "text",
+                                        "leaves": [
+                                            {
+                                                "text": "Test"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
         ]
-      },
-      {
-        object: 'block',
-        type: 'paragraph',
-        nodes: [
-          {
-            object: 'text',
-            leaves: [
-              {
-                text: '222222'
-              }
-            ]
-          }
-        ]
-      },
-    ]
-  }
+    }
 };
+
 
 let doc = Automerge.init();
 const initialSlateValue = Value.fromJSON(initialValue);

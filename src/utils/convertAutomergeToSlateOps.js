@@ -2,6 +2,7 @@
  * This converts Automerge operations to Slate operations.
  */
 
+import automergeJsonToSlate from "./automergeJsonToSlate"
 
 /**
  * @function automergeOpCreate
@@ -165,15 +166,31 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps, value) => {
         return parseInt(x, 10);
       });
 
-      if (objIdMap[op.value]) {
-        slateOp = {
-          type: 'insert_text',
-          path: slatePath,
-          offset: op.index,
-          text: objIdMap[op.value].text,
-          marks: objIdMap[op.value].marks
-        }
+      const nodeToAdd = objIdMap[op.value];
+
+      switch (nodeToAdd.object) {
+        case "character":
+          slateOp = {
+            type: 'insert_text',
+            path: slatePath,
+            offset: op.index,
+            text: objIdMap[op.value].text,
+            marks: objIdMap[op.value].marks
+          }
+          break;
+        case "block":
+          const newNode = automergeJsonToSlate(nodeToAdd);
+          slatePath.push(op.index)
+          slateOp = {
+            type: "insert_node",
+            path: slatePath,
+            node: newNode,
+          }
+          break;
+        default:
+          break;
       }
+
     } else {
       // FIXME: Is `op.index` always the right path? What happens in a
       // sub-node?

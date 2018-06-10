@@ -10,6 +10,7 @@ import { Editor } from 'slate-react'
 import Automerge from 'automerge'
 import Immutable from "immutable";
 import React from 'react'
+import EditList from 'slate-edit-list'
 
 
 /**
@@ -21,6 +22,44 @@ import React from 'react'
 const uselessFunction = (a, b) => {
   return Immutable.is(a, b) ? Immutable.List() : Immutable.List([""]);
 };
+
+
+const plugin = EditList();
+const plugins = [
+  plugin
+]
+
+function renderNode(props: *) {
+    const { node, attributes, children, editor } = props;
+    const isCurrentItem = plugin.utils
+        .getItemsAtRange(editor.value)
+        .contains(node);
+
+    switch (node.type) {
+        case 'ul_list':
+            return <ul {...attributes}>{children}</ul>;
+        case 'ol_list':
+            return <ol {...attributes}>{children}</ol>;
+
+        case 'list_item':
+            return (
+                <li
+                    className={isCurrentItem ? 'current-item' : ''}
+                    title={isCurrentItem ? 'Current Item' : ''}
+                    {...props.attributes}
+                >
+                    {props.children}
+                </li>
+            );
+
+        case 'paragraph':
+            return <div {...attributes}>{children}</div>;
+        case 'heading':
+            return <h1 {...attributes}>{children}</h1>;
+        default:
+            return <div {...attributes}>{children}</div>;
+    }
+}
 
 
 export class Client extends React.Component {
@@ -123,7 +162,10 @@ export class Client extends React.Component {
       const change = currentValue.change()
 
       // Apply the operation
-      change.applyOperations(slateOps)
+      try {
+        change.applyOperations(slateOps)
+      } catch (err) { }
+
       return change.value
     }
 
@@ -184,6 +226,8 @@ export class Client extends React.Component {
                   ref={(e) => {this.editor = e}}
                   value={this.state.value}
                   onChange={this.onChange}
+                  renderNode={renderNode}
+                  plugins={plugins}
               />
             </div>
         )
