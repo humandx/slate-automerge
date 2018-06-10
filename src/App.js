@@ -11,6 +11,20 @@ const initialValue = {
         "nodes": [
             {
                 "object": "block",
+                "type": "paragraph",
+                "nodes": [
+                    {
+                        "object": "text",
+                        "leaves": [
+                            {
+                                "text": "This is node not in a list"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "object": "block",
                 "type": "ul_list",
                 "data": {
                     "style": {
@@ -30,7 +44,7 @@ const initialValue = {
                                         "object": "text",
                                         "leaves": [
                                             {
-                                                "text": "Test"
+                                                "text": "This is node in a list. Hit [ENTER] and then hit [TAB]"
                                             }
                                         ]
                                     }
