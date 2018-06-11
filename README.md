@@ -1,6 +1,6 @@
 ## Installation instructions
 
-`./install_packages` - to install all dependencies. This installs all dependencies along with the path-from-root branch of Automerge which is also update to date with master.
+`./install_packages` - to install all dependencies. This installs all dependencies along with the path-from-root branch of Automerge which is also up-to-date with master.
 
 `yarn start` - to run the webserver
 
@@ -11,6 +11,8 @@ will see various number of clients. When the "CURRENTLY LIVE SYNCING" banner is
 up, all changes to any client will be broadcasted to all other clients. When the
 "CURRENTLY OFFLINE" banner is up, no changes are send until the "sync" button is
 clicked.
+
+You can also update the number of clients dynamically.
 
 ## Code
 - `App.js` setups up the initial Slate and Automerge document, instantiates the clients, and acts as the network layer between the clients.
@@ -38,6 +40,10 @@ Flow of when a change is made on Client A and broadcast to Client B:
 
 ## Questions / Notes / Optimizations todos
 1) Can we compute the output of Automerge.diff (step 3b) from the changes received (in 3)? This would allow us to avoid doing the Automerge.diff.
+2) In Automerge, moving a node seems like we're just linking a node from one location to another location. Can we return the path for the new and old location? This will help with identifying the node in Slate.
+3) If a new client joins, do they have to initialize the entire Automerge document (with the history)? Or can they just start from the latest snapshot?
+4) What's a good way to batch changes from a client? To reduce network traffic, it would be nice to batch keystrokes within a second of each other together.
+5) How should we send over information (such as cursor location) which we don't want to persist?
 
 ## Original README below
 
