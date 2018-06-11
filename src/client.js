@@ -6,11 +6,13 @@ import { applyImmutableDiffOperations } from "./utils/immutableDiffToAutomerge"
 import { applySlateOperations } from "./utils/slateOpsToAutomerge"
 import { convertAutomergeToSlateOps } from "./utils/convertAutomergeToSlateOps"
 import { Editor } from 'slate-react'
-// import { Value } from 'slate'
+import { Value } from 'slate'
 import Automerge from 'automerge'
 import Immutable from "immutable";
 import React from 'react'
 import EditList from 'slate-edit-list'
+import automergeJsonToSlate from "./utils/automergeJsonToSlate"
+
 
 
 /**
@@ -71,16 +73,15 @@ export class Client extends React.Component {
       this.doc = Automerge.load(this.props.savedAutomergeDoc)
       this.pathMap = null;
 
-      // const initialValue = automergeJsontoSlate({
-      //   "document": {...this.doc.note}
-      // })
-      // const initialSlateValue = Value.fromJSON(initialValue);
+      const initialValue = automergeJsonToSlate({
+        "document": {...this.doc.note}
+      })
+      const initialSlateValue = Value.fromJSON(initialValue);
 
       // Should build the Slate value from this.doc
 
       this.state = {
-        value: this.props.initialSlateValue,
-        // value: initialSlateValue,
+        value: initialSlateValue,
         online: true,
         docOfflineHistory: Immutable.List(),
       }

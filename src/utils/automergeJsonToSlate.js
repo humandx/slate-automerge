@@ -27,21 +27,22 @@ const fromJSON = (value) => {
 
     let newJson = {};
 
-    let object = value.object;
-    switch(object) {
-        case "text":
-            // Difficult conversion. Look in
-            // slate/packages/slate/src/models/text.js -> toJSON() and getLeaves()
-            newJson = value;
-            newJson.leaves = getLeaves(value.characters)
-            break;
-        default:
-            newJson = value;
-            newJson.nodes = value.nodes.map((node) => {return fromJSON(node)})
-            break;
+    Object.keys(value).forEach((key) => {
+        if (Array.isArray(value[key])) {
+            newJson[key] = value[key].map((node) => {return fromJSON(node)})
+        } else if (typeof(value[key]) === "object") {
+            newJson[key] = fromJSON(value[key])
+        } else {
+            newJson[key] = value[key]
+        }
+    })
+
+    if (value.object == "text") {
+        newJson.leaves = getLeaves(value.characters)
     }
 
     return newJson;
 }
 
 export default fromJSON
+
