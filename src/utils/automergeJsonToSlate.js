@@ -37,7 +37,7 @@ const fromJSON = (value) => {
         }
     })
 
-    if (value.object == "text") {
+    if (value.object === "text") {
         newJson.leaves = getLeaves(value.characters)
     }
 

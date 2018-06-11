@@ -14,7 +14,6 @@ import EditList from 'slate-edit-list'
 import automergeJsonToSlate from "./utils/automergeJsonToSlate"
 
 
-
 /**
  * @function uselessFunction
  * @desc This is a completely useless function but for some odd reason, the
@@ -130,12 +129,17 @@ export class Client extends React.Component {
     /**
      * @function updateWithNewAutomergeDoc
      * @desc Update the client with an Automerge document.
-     *     NOT USED
-     * @param {Automerge.document} automergeDoc - The new Automerge document to update the client to
+     * @param {Automerge.document} automergeDoc - The new Automerge document to
+     *     update the client to
      */
     updateWithNewAutomergeDoc = ( automergeDoc ) => {
-      const changes = Automerge.getChanges(this.doc, automergeDoc)
-      this.updateWithRemoteChanges(changes)
+        this.doc = automergeDoc
+        const newJson = automergeJsonToSlate({
+          "document": {...automergeDoc.note}
+        })
+        const newValue = Value.fromJSON(newJson)
+        this.setState({ value: newValue })
+        return newValue
     }
 
     /**
@@ -187,10 +191,7 @@ export class Client extends React.Component {
      **************************************/
     onChange = ({ operations, value }) => {
 
-      console.log(`Client ${this.props.clientNumber}`)
-
       const differences = uselessFunction(this.state.value.document, value.document);
-      console.log(differences)
 
       this.setState({ value: value })
 
