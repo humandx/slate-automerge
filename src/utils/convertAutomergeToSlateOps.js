@@ -2,6 +2,7 @@
  * This converts Automerge operations to Slate operations.
  */
 
+import automergeJsonToSlate from "./automergeJsonToSlate"
 
 /**
  * @function automergeOpCreate
@@ -54,7 +55,7 @@ const automergeOpRemove = (op, objIdMap, slateOps, value) => {
     // Validate the operation using the node type at path given by `op.obj`
     // FIXME: Is the Slate's Value reliable enough to get the node type?
     // Use the document to be changed
-    const removeNode = value.document.getNodeAtPath(slatePath)
+    let removeNode = value.document.getNodeAtPath(slatePath)
     switch (removeNode.object) {
       case 'text':
         slateOp = {
@@ -66,6 +67,10 @@ const automergeOpRemove = (op, objIdMap, slateOps, value) => {
         }
         break;
       case 'block':
+        if (removeNode.type !== "paragraph") {
+          removeNode = removeNode.nodes.get(op.index);
+          slatePath = [...slatePath, op.index];
+        }
         slateOp = {
           type: 'remove_node',
           path: slatePath,
@@ -165,15 +170,31 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps, value) => {
         return parseInt(x, 10);
       });
 
-      if (objIdMap[op.value]) {
-        slateOp = {
-          type: 'insert_text',
-          path: slatePath,
-          offset: op.index,
-          text: objIdMap[op.value].text,
-          marks: objIdMap[op.value].marks
-        }
+      const nodeToAdd = objIdMap[op.value];
+
+      switch (nodeToAdd.object) {
+        case "character":
+          slateOp = {
+            type: 'insert_text',
+            path: slatePath,
+            offset: op.index,
+            text: objIdMap[op.value].text,
+            marks: objIdMap[op.value].marks
+          }
+          break;
+        case "block":
+          const newNode = automergeJsonToSlate(nodeToAdd);
+          slatePath.push(op.index)
+          slateOp = {
+            type: "insert_node",
+            path: slatePath,
+            node: newNode,
+          }
+          break;
+        default:
+          break;
       }
+
     } else {
       // FIXME: Is `op.index` always the right path? What happens in a
       // sub-node?

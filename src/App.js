@@ -5,47 +5,62 @@ import slateCustomToJson from "./utils/slateCustomToJson"
 import Automerge from 'automerge'
 import { Client } from "./client"
 
+
 const initialValue = {
-  document: {
-    nodes: [
-      {
-        object: 'block',
-        type: 'paragraph',
-        nodes: [
-          {
-            object: 'text',
-            leaves: [
-              {
-                text: '111111'
-              }
-            ]
-          }
+    "document": {
+        "nodes": [
+            {
+                "object": "block",
+                "type": "paragraph",
+                "nodes": [
+                    {
+                        "object": "text",
+                        "leaves": [
+                            {
+                                "text": "This is node not in a list"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "object": "block",
+                "type": "ul_list",
+                "data": {
+                    "style": {
+                        "listStyleType": "disc"
+                    }
+                },
+                "nodes": [
+                    {
+                        "object": "block",
+                        "type": "list_item",
+                        "nodes": [
+                            {
+                                "object": "block",
+                                "type": "paragraph",
+                                "nodes": [
+                                    {
+                                        "object": "text",
+                                        "leaves": [
+                                            {
+                                                "text": "This is node in a list. Hit [ENTER] and then hit [TAB]"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
         ]
-      },
-      {
-        object: 'block',
-        type: 'paragraph',
-        nodes: [
-          {
-            object: 'text',
-            leaves: [
-              {
-                text: '222222'
-              }
-            ]
-          }
-        ]
-      },
-    ]
-  }
+    }
 };
+
 
 let doc = Automerge.init();
 const initialSlateValue = Value.fromJSON(initialValue);
-const initialSlateValue0 = Value.fromJSON(initialValue);
-const initialSlateValue1 = Value.fromJSON(initialValue);
-const initialSlateValue2 = Value.fromJSON(initialValue);
-const initialSlateValue3 = Value.fromJSON(initialValue);
 doc = Automerge.change(doc, 'Initialize Slate state', doc => {
   doc.note = slateCustomToJson(initialSlateValue.document);
 })
@@ -148,7 +163,6 @@ class App extends React.Component {
                   clientNumber={0}
                   ref={(client) => {this.client[0] = client}}
                   savedAutomergeDoc={savedAutomergeDoc}
-                  initialSlateValue={initialSlateValue0}
                   broadcast={this.broadcast}
                   online={this.state.online}
               />
@@ -159,7 +173,6 @@ class App extends React.Component {
                   clientNumber={1}
                   ref={(client) => {this.client[1] = client}}
                   savedAutomergeDoc={savedAutomergeDoc}
-                  initialSlateValue={initialSlateValue1}
                   broadcast={this.broadcast}
                   online={this.state.online}
               />
@@ -170,7 +183,6 @@ class App extends React.Component {
                   clientNumber={2}
                   ref={(client) => {this.client[2] = client}}
                   savedAutomergeDoc={savedAutomergeDoc}
-                  initialSlateValue={initialSlateValue2}
                   broadcast={this.broadcast}
                   online={this.state.online}
               />
@@ -181,7 +193,6 @@ class App extends React.Component {
                   clientNumber={3}
                   ref={(client) => {this.client[3] = client}}
                   savedAutomergeDoc={savedAutomergeDoc}
-                  initialSlateValue={initialSlateValue3}
                   broadcast={this.broadcast}
                   online={this.state.online}
               />

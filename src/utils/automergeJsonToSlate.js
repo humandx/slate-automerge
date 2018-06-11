@@ -5,20 +5,44 @@
  * https://github.com/ianstormtaylor/slate/issues/1813 is completed.
  */
 
+const getLeaves = (characterList) => {
+    let leaves = [];
+    let text = ""
+    characterList.forEach((character) => {
+        text = text.concat(character.text)
+    })
+    let leaf = {
+        object: "leaf",
+        marks: [],
+        text: text
+    }
+    leaves.push(leaf)
+    return leaves
+}
 
-const fromJSON = (automergeJson) => {
+const fromJSON = (value) => {
     if (value === undefined || value === null) {
         return null;
     }
 
-    let object = value.object;
-    switch(object) {
-        case "text":
-            // Difficult conversion. Look in
-            // slate/packages/slate/src/models/text.js -> toJSON() and getLeaves()
-            break;
-        default;
+    let newJson = {};
 
-            break;
+    Object.keys(value).forEach((key) => {
+        if (Array.isArray(value[key])) {
+            newJson[key] = value[key].map((node) => {return fromJSON(node)})
+        } else if (typeof(value[key]) === "object") {
+            newJson[key] = fromJSON(value[key])
+        } else {
+            newJson[key] = value[key]
+        }
+    })
+
+    if (value.object == "text") {
+        newJson.leaves = getLeaves(value.characters)
     }
+
+    return newJson;
 }
+
+export default fromJSON
+
