@@ -67,10 +67,13 @@ const automergeOpRemove = (op, objIdMap, slateOps, value) => {
         }
         break;
       case 'block':
-        removeNode = removeNode.nodes.get(op.index)
+        if (removeNode.type !== "paragraph") {
+          removeNode = removeNode.nodes.get(op.index);
+          slatePath = [...slatePath, op.index];
+        }
         slateOp = {
           type: 'remove_node',
-          path: [...slatePath, op.index],
+          path: slatePath,
           node: removeNode
         }
         break;
