@@ -20,14 +20,21 @@ body {
     padding: 1%;
 }
 
-.buttons {
+.options {
     width: fit-content;
     display: block;
     margin: auto;
 }
 
+.options-text {
+    text-align: center;
+    font-weight: bolder;
+}
+
 .online-button {
     display: inline-block;
+    padding: 10px;
+    margin: 5px;
 }
 
 .green {

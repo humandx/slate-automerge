@@ -13,6 +13,7 @@ doc = Automerge.change(doc, 'Initialize Slate state', doc => {
   doc.note = slateCustomToJson(initialSlateValue.document);
 })
 const savedAutomergeDoc = Automerge.save(doc);
+const maxClients = 6;
 
 class App extends React.Component {
 
@@ -24,6 +25,7 @@ class App extends React.Component {
 
       this.state = {
         online: true,
+        numClients: 2,
       }
     }
 
@@ -87,6 +89,30 @@ class App extends React.Component {
       this.setState({online: !this.state.online});
     }
 
+    // Change the number of clients
+    updateNumClients = (event) => {
+      const numClients = event.target.value;
+
+      const numCurrentClients = this.state.numClients;
+      const hasNewClients = numClients > this.state.numClients;
+      const updateNewClients = () => {
+        if (hasNewClients) {
+          const doc = this.client[0].getAutomergeDoc();
+          for (let i = numCurrentClients; i < numClients; i++) {
+            this.client[i].updateWithNewAutomergeDoc(doc);
+          }
+        } else {
+          this.client = this.client.slice(0, numClients);
+        }
+      }
+
+      if (numClients <= 0 || numClients > maxClients) {
+        return;
+      } else {
+        this.setState({numClients: numClients}, updateNewClients);
+      }
+    }
+
     render = () => {
         let onlineText;
         let onlineTextClass;
@@ -101,56 +127,45 @@ class App extends React.Component {
           toggleButtonText = "GO ONLINE"
         }
 
+        let clientComponents = [];
+        for (let i = 0; i < this.state.numClients; i++) {
+          clientComponents.push(
+            <div className="client" key={`client-div-${i}`}>
+              <Client
+                  key={`client-${i}`}
+                  clientNumber={i}
+                  ref={(client) => {this.client[i] = client}}
+                  savedAutomergeDoc={savedAutomergeDoc}
+                  broadcast={this.broadcast}
+                  online={this.state.online}
+              />
+            </div>
+          );
+        }
+
         return (
           <div>
             <div className={onlineTextClass}>{onlineText}</div>
             <hr></hr>
-            <div className="client">
-              <Client
-                  key={0}
-                  clientNumber={0}
-                  ref={(client) => {this.client[0] = client}}
-                  savedAutomergeDoc={savedAutomergeDoc}
-                  broadcast={this.broadcast}
-                  online={this.state.online}
-              />
-            </div>
-            <div className="client">
-              <Client
-                  key={1}
-                  clientNumber={1}
-                  ref={(client) => {this.client[1] = client}}
-                  savedAutomergeDoc={savedAutomergeDoc}
-                  broadcast={this.broadcast}
-                  online={this.state.online}
-              />
-            </div>
-            <div className="client">
-              <Client
-                  key={2}
-                  clientNumber={2}
-                  ref={(client) => {this.client[2] = client}}
-                  savedAutomergeDoc={savedAutomergeDoc}
-                  broadcast={this.broadcast}
-                  online={this.state.online}
-              />
-            </div>
-            <div className="client">
-              <Client
-                  key={3}
-                  clientNumber={3}
-                  ref={(client) => {this.client[3] = client}}
-                  savedAutomergeDoc={savedAutomergeDoc}
-                  broadcast={this.broadcast}
-                  online={this.state.online}
-              />
-            </div>
+            {clientComponents}
             <hr></hr>
-            <div className="buttons">
+            <div className="options">
+              <div className="options-text">Options:</div>
               <button className="online-button" onClick={this.toggleOnline}>{toggleButtonText}</button>
               {!this.state.online &&
                   <button className="online-button" onClick={this.offlineSync}>Sync</button>
               }
+              <div>
+                <span>Number of clients: </span>
+                <input
+                  type="number"
+                  className="numclient-input"
+                  onChange={this.updateNumClients}
+                  value={this.state.numClients}
+                  min={1}
+                  max={maxClients}
+                />
+              </div>
             </div>
           </div>
         )
