@@ -159,15 +159,24 @@ export class Client extends React.Component {
      */
     updateWithAutomergeOperations = (currentValue, opSetDiff) => {
       // Convert the changes from the Automerge document to Slate operations
-      const slateOps = convertAutomergeToSlateOps(opSetDiff, currentValue)
-      const change = currentValue.change()
-
-      // Apply the operation
       try {
-        change.applyOperations(slateOps)
-      } catch (err) { }
+        const slateOps = convertAutomergeToSlateOps(opSetDiff, currentValue)
+        const change = currentValue.change()
 
-      return change.value
+        // Apply the operation
+        try {
+          change.applyOperations(slateOps)
+        } catch (err) { }
+
+        return change.value
+      } catch (e) {
+        console.log(e)
+        const newJson = automergeJsonToSlate({
+          "document": {...this.doc.note}
+        })
+        const newValue = Value.fromJSON(newJson)
+        return newValue
+      }
     }
 
     /**************************************
