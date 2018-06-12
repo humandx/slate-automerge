@@ -48,6 +48,7 @@ Flow of when a change is made on Client A and broadcast to Client B:
 3) If a new client joins, do they have to initialize the entire Automerge document (with the history)? Or can they just start from the latest snapshot?
 4) What's a good way to batch changes from a client? To reduce network traffic, it would be nice to batch keystrokes within a second of each other together.
 5) How should we send over information (such as cursor location) which we don't want to persist?
+6) I see a loop in Automerge.Connection where Client A will send an operation to Client B who will send it back to Client A. Currently, Client A recognizes that there are no operations to be done and ends the loop.
 
 ## Original README below
 

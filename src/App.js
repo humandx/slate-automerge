@@ -7,6 +7,7 @@ import { Client } from "./client"
 import { initialValue } from "./utils/initialAutomergeDoc"
 
 
+const docId = 1;
 let doc = Automerge.init();
 const initialSlateValue = Value.fromJSON(initialValue);
 doc = Automerge.change(doc, 'Initialize Slate state', doc => {
@@ -29,52 +30,13 @@ class App extends React.Component {
       }
     }
 
-    /**
-     * NOT USED
-     */
-    offlineSyncUsingMerge = () => {
-      let docs = [];
-      this.client.forEach((client, idx) => {
-        docs[idx] = client.getAutomergeDoc();
-      });
-
-      let mergedDoc = docs[0];
-      docs.forEach((nextDoc, idx) => {
-        if (idx === 0) return;
-        mergedDoc = Automerge.merge(mergedDoc, nextDoc);
-      });
-
-      this.client.forEach((client, idx) => {
-        client.updateWithNewAutomergeDoc(mergedDoc);
-      });
-    }
-
-    // Sync all clients.
-    offlineSync = () => {
-      // Get all stored changes from all clients.
-      let changesList = [];
-      this.client.forEach((client, idx) => {
-        changesList[idx] = client.getStoredLocalChanges();
-      });
-
-      // Send all relevant changes to all clients.
-      this.client.forEach((client, clientIdx) => {
-        let allChanges = Immutable.List();
-        changesList.forEach((changes, changeIdx) => {
-          if (clientIdx !== changeIdx) {
-            allChanges = allChanges.concat(changes);
-          }
-        });
-        client.updateWithBatchedRemoteChanges(allChanges);
-      });
-    }
-
     // Broadcast a change from one client to all others.
-    broadcast = (clientNumber, changes) => {
+    broadcast = (clientNumber, message) => {
       this.client.forEach((client, idx) => {
         if (clientNumber !== idx) {
           setTimeout(() => {
-            client.updateWithRemoteChanges(changes);
+            console.log(`Broadcasting from ${clientNumber} to ${idx}`)
+            client.updateWithRemoteChanges(message);
           })
         }
       })
@@ -82,10 +44,6 @@ class App extends React.Component {
 
     // Toggle if we should sync the clients online or offline.
     toggleOnline = () => {
-      // If going online from offline, make sure all clients are synced.
-      if (!this.state.online) {
-        this.offlineSync();
-      }
       this.setState({online: !this.state.online});
     }
 
@@ -97,10 +55,7 @@ class App extends React.Component {
       const hasNewClients = numClients > this.state.numClients;
       const updateNewClients = () => {
         if (hasNewClients) {
-          const doc = this.client[0].getAutomergeDoc();
-          for (let i = numCurrentClients; i < numClients; i++) {
-            this.client[i].updateWithNewAutomergeDoc(doc);
-          }
+          // pass
         } else {
           this.client = this.client.slice(0, numClients);
         }
@@ -134,6 +89,7 @@ class App extends React.Component {
               <Client
                   key={`client-${i}`}
                   clientNumber={i}
+                  docId={docId}
                   ref={(client) => {this.client[i] = client}}
                   savedAutomergeDoc={savedAutomergeDoc}
                   broadcast={this.broadcast}
@@ -151,7 +107,7 @@ class App extends React.Component {
             <hr></hr>
             <div className="options">
               <div className="options-text">Options:</div>
-              <button className="online-button" onClick={this.toggleOnline}>{toggleButtonText}</button>
+              {/*<button className="online-button" onClick={this.toggleOnline}>{toggleButtonText}</button>*/}
               {!this.state.online &&
                   <button className="online-button" onClick={this.offlineSync}>Sync</button>
               }
