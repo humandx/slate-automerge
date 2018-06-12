@@ -70,7 +70,6 @@ export class Client extends React.Component {
 
       this.onChange = this.onChange.bind(this)
       this.doc = Automerge.load(this.props.savedAutomergeDoc)
-      this.pathMap = null;
 
       this.docSet = new Automerge.DocSet()
       const clientNumber = this.props.clientNumber
@@ -89,7 +88,6 @@ export class Client extends React.Component {
       this.state = {
         value: initialSlateValue,
         online: this.props.online,
-        docOfflineHistory: Immutable.List(),
       }
     }
 
