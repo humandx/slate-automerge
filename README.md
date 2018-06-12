@@ -35,8 +35,12 @@ Flow of when a change is made on Client A and broadcast to Client B:
 * The differences between the Client B's new and old Automerge documents are computed (using Automerge.diff).
 * The differences are converted to Slate Operations (in convertAutomergeToSlateOps) and applied to Client B's Slate Value.
 
+## Things to note:
+1) Using the same Client as above, the Slate Operations on Client A will NOT be the same as the transformed Slate Operations on Client B. For example, when splitting a node on Client A (hit [ENTER] in the middle of a sentence), Slate on Client A will issue a `split_node` change operation. On Client B, the operations might be many `remove_text` operations and an `insert_node` operation. This should be fine since we're using the Automerge document as the "ground truth".
+2) If Slate crashes due to a bad remote operation, Slate will re-initialize with the latest Automerge document. We don't want to do this too often because it results in a complete re-render of the editor which results in losing the cursor position.
+
 ## Known issues:
-1) Syncing multiple documents when there are large changes seems to break
+1) Syncing multiple documents when there are large changes seems to break. This is solved by #2 above.
 
 ## Questions / Notes / Optimizations todos
 1) Can we compute the output of Automerge.diff (step 3b) from the changes received (in 3)? This would allow us to avoid doing the Automerge.diff.
