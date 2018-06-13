@@ -161,8 +161,34 @@ export class Client extends React.Component {
     /**
      * TOGGLE ONLINE
      */
-    toggleOnline = () => {
-      this.setState({online: !this.state.online});
+    toggleOnline = (event ) => {
+      this.toggleOnlineHelper(!this.state.online);
+    }
+
+    // When client goes online/offline, alert the server and open/close the
+    // connection.
+    toggleOnlineHelper = (isOnline) => {
+      let newOnline;
+      if (isOnline === undefined) {
+        newOnline = !this.state.online;
+      } else {
+        newOnline = isOnline;
+      }
+
+      if (newOnline) {
+        this.props.connectionHandler(this.props.clientNumber, true)
+        this.connection.open()
+        let clock = this.docSet.getDoc(this.props.docId)._state.getIn(['opSet', 'clock']);
+        this.props.broadcast(this.props.clientNumber, {
+          docId: this.props.docId,
+          clock: clock,
+        })
+      } else {
+        this.connection.close()
+        this.props.connectionHandler(this.props.clientNumber, false)
+      }
+
+      this.setState({online: newOnline})
     }
 
     /**************************************
@@ -198,10 +224,15 @@ export class Client extends React.Component {
      * RENDER CLIENT *
      *****************/
     render = () => {
+        let onlineText = this.state.online ? "CURRENTLY LIVE SYNCING" : "CURRENTLY OFFLINE";
+        let onlineTextClass = this.state.online ? "client-online-text green" : "client-online-text red";
+        let toggleButtonText = this.state.online ? "GO OFFLINE" : "GO ONLINE";
+
         return (
             <div>
+              <div className={onlineTextClass}>{onlineText}</div>
               <span><u>Client: {this.props.clientNumber}</u></span>
-              {/*<button onClick={this.toggleOnline}>Online</button>*/}
+              <button className="client-online-button" onClick={this.toggleOnline}>{toggleButtonText}</button>
               <Editor
                   key={this.props.clientNumber}
                   ref={(e) => {this.editor = e}}

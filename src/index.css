@@ -37,6 +37,15 @@ body {
     margin: 5px;
 }
 
+.client-online-text {
+    padding: 10px;
+    margin: 5px;
+}
+
+.client-online-button {
+    float: right;
+}
+
 .green {
     background-color: green;
 }
