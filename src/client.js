@@ -70,13 +70,7 @@ export class Client extends React.Component {
 
       this.onChange = this.onChange.bind(this)
 
-      if (this.props.savedAutomergeDoc) {
-        this.doc = Automerge.load(this.props.savedAutomergeDoc)
-        this.syncInitialDoc = false;
-      } else {
-        this.doc = Automerge.init();
-        this.syncInitialDoc = true;
-      }
+      this.doc = Automerge.init();
       this.docSet = new Automerge.DocSet()
 
       this.connection = new Automerge.Connection(
@@ -98,15 +92,14 @@ export class Client extends React.Component {
     }
 
     componentDidMount = () => {
-      this.connection.open()
-      this.docSet.setDoc(this.props.docId, this.doc)
-
-      if (this.syncInitialDoc) {
+      setTimeout(() => {
+        this.connection.open()
+        this.docSet.setDoc(this.props.docId, this.doc)
         this.props.broadcast(this.props.clientNumber, {
           docId: this.props.docId,
           clock: Immutable.Map(),
         })
-      }
+      })
     }
 
     componentWillReceiveProps = (nextProps) => {

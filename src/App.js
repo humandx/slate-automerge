@@ -16,6 +16,7 @@ doc = Automerge.change(doc, 'Initialize Slate state', doc => {
 const savedAutomergeDoc = Automerge.save(doc);
 const maxClients = 6;
 
+
 class App extends React.Component {
 
     constructor(props) {
@@ -23,6 +24,9 @@ class App extends React.Component {
 
       this.broadcast = this.broadcast.bind(this);
       this.client = [];
+      this.docSet = new Automerge.DocSet();
+      this.docSet.setDoc(docId, doc);
+      this.connections = [];
 
       this.state = {
         online: true,
@@ -32,14 +36,21 @@ class App extends React.Component {
 
     // Broadcast a change from one client to all others.
     broadcast = (clientNumber, message) => {
-      this.client.forEach((client, idx) => {
-        if (clientNumber !== idx) {
-          setTimeout(() => {
-            console.log(`Broadcasting from ${clientNumber} to ${idx}`)
-            client.updateWithRemoteChanges(message);
-          })
-        }
-      })
+      if (this.connections.length <= clientNumber) {
+        let connection = new Automerge.Connection(
+          this.docSet,
+          (message) => {
+            this.client.forEach((client, idx) => {
+              client.updateWithRemoteChanges(message);
+            })
+          }
+        )
+        connection.open()
+        this.connections.push(connection)
+      }
+
+      console.log(`Server received message from Client ${clientNumber}`)
+      this.connections[clientNumber].receiveMsg(message)
     }
 
     // Toggle if we should sync the clients online or offline.
@@ -49,16 +60,24 @@ class App extends React.Component {
 
     // Change the number of clients
     updateNumClients = (event) => {
-      const numClients = event.target.value;
+      this.updateNumClientsHelper(event.target.value)
+    }
 
+    addClient = (event) => {
+      this.updateNumClientsHelper(this.state.numClients + 1)
+    }
+
+    removeClient = (event) => {
+      this.updateNumClientsHelper(this.state.numClients - 1)
+    }
+
+    updateNumClientsHelper = (numClients) => {
       const numCurrentClients = this.state.numClients;
       const hasNewClients = numClients > this.state.numClients;
+
       const updateNewClients = () => {
-        if (hasNewClients) {
-          // pass
-        } else {
-          this.client = this.client.slice(0, numClients);
-        }
+        this.client = this.client.slice(0, numClients);
+        this.connections = this.connections.slice(0, numClients);
       }
 
       if (numClients <= 0 || numClients > maxClients) {
@@ -66,6 +85,7 @@ class App extends React.Component {
       } else {
         this.setState({numClients: numClients}, updateNewClients);
       }
+
     }
 
     render = () => {
@@ -82,7 +102,6 @@ class App extends React.Component {
                   clientNumber={i}
                   docId={docId}
                   ref={(client) => {this.client[i] = client}}
-                  savedAutomergeDoc={i == 0 ? savedAutomergeDoc : null}
                   broadcast={this.broadcast}
                   online={this.state.online}
               />
@@ -99,9 +118,6 @@ class App extends React.Component {
             <div className="options">
               <div className="options-text">Options:</div>
               {/*<button className="online-button" onClick={this.toggleOnline}>{toggleButtonText}</button>*/}
-              {!this.state.online &&
-                  <button className="online-button" onClick={this.offlineSync}>Sync</button>
-              }
               <div>
                 <span>Number of clients: </span>
                 <input
@@ -112,6 +128,8 @@ class App extends React.Component {
                   min={1}
                   max={maxClients}
                 />
+                <button className="online-button" onClick={this.addClient}>Add client</button>
+                <button className="online-button" onClick={this.removeClient}>Remove client</button>
               </div>
             </div>
           </div>
