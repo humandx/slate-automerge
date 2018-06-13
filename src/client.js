@@ -140,27 +140,28 @@ export class Client extends React.Component {
         const change = currentValue.change()
 
         // Apply the operation
-        try {
-          change.applyOperations(slateOps)
-        } catch (err) { }
+        change.applyOperations(slateOps)
 
-        newValue = change.value
+        this.setState({ value: change.value })
       } catch (e) {
         // If an error occurs, release the Slate Value based on the Automerge
         // document, which is the ground truth.
         console.error(e)
+        this.updateSlateFromAutomerge()
+      }
+    }
+
+    updateSlateFromAutomerge = () => {
         const doc = this.docSet.getDoc(this.props.docId)
         const newJson = automergeJsonToSlate({
           "document": {...doc.note}
         })
-        newValue = Value.fromJSON(newJson)
-      }
-      this.setState({ value: newValue })
+        this.setState({ value: Value.fromJSON(newJson) })
     }
 
-    /**
-     * TOGGLE ONLINE
-     */
+    /**************************************
+     * Handle online/offline connections  *
+     **************************************/
     toggleOnline = (event ) => {
       this.toggleOnlineHelper(!this.state.online);
     }
@@ -237,7 +238,10 @@ export class Client extends React.Component {
                 <td>Client: {this.props.clientNumber}</td>
                 <td><button className="client-online-button" onClick={this.toggleOnline}>{toggleButtonText}</button></td>
               </tr>
-              <tr><td colSpan="2">Actor Id: {actorId}</td></tr>
+              <tr>
+                <td>Actor Id: {actorId}</td>
+                <td><button className="client-online-button" onClick={this.updateSlateFromAutomerge}>Sync Slate</button></td>
+              </tr>
             </tbody>
           </table>
           <hr></hr>
