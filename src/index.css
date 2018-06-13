@@ -25,17 +25,17 @@ body {
 }
 
 .client-editor {
-    display: inline-block;
-    width: 70%;
     border-right-color: black;
     border-right-style: solid;
     border-right-width: 1px;
+    padding-right: 15px;
+    width: 75%;
 }
 
 .client-internal {
-    display: inline-block;
-    float: right;
-    width: 30%;
+    padding-left: 15px;
+    width: 25%;
+    position: absolute;
 }
 
 .table-cell-left {

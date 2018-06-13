@@ -265,7 +265,7 @@ export class Client extends React.Component {
         })
         return (
           <div>
-            <div>Internal clock (for debugging)</div>
+            <div>Internal clock:</div>
             <table>
               <tbody>
                 <tr>
@@ -288,7 +288,8 @@ export class Client extends React.Component {
         return (
             <div>
               {this.renderHeader()}
-              <div className="client-editor">
+              <table><tbody>
+              <td className="client-editor">
                 <Editor
                     key={this.props.clientNumber}
                     ref={(e) => {this.editor = e}}
@@ -297,10 +298,11 @@ export class Client extends React.Component {
                     renderNode={renderNode}
                     plugins={plugins}
                 />
-              </div>
-              <div className="client-internal">
+              </td>
+              <td className="client-internal">
                 {this.renderInternalClock()}
-              </div>
+              </td>
+              </tbody></table>
             </div>
         )
     }
