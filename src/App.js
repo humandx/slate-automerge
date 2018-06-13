@@ -22,7 +22,7 @@ class App extends React.Component {
     constructor(props) {
       super(props)
 
-      this.broadcast = this.broadcast.bind(this);
+      this.sendMessage = this.sendMessage.bind(this);
       this.clients = [];
       this.docSet = new Automerge.DocSet();
       this.docSet.setDoc(docId, doc);
@@ -34,8 +34,10 @@ class App extends React.Component {
       }
     }
 
-    // Broadcast a change from one client to all others.
-    broadcast = (clientNumber, message) => {
+    /************************************************
+     * Send a change from one client to all others  *
+     ************************************************/
+    sendMessage = (clientNumber, message) => {
       if (this.connections.length <= clientNumber) {
         let connection = new Automerge.Connection(
           this.docSet,
@@ -61,22 +63,9 @@ class App extends React.Component {
       })
     }
 
-    // Toggle if we should sync the clients online or offline.
-    toggleOnline = () => {
-      this.setState({online: true});
-      this.clients.forEach((client, idx) => {
-        client.toggleOnlineHelper(true);
-      })
-    }
-
-    toggleOffline = () => {
-      this.setState({online: false});
-      this.clients.forEach((client, idx) => {
-        client.toggleOnlineHelper(false);
-      })
-    }
-
-    // Change the number of clients
+    /**************************************
+     * Add/remove clients  *
+     **************************************/
     updateNumClients = (event) => {
       this.updateNumClientsHelper(event.target.value)
     }
@@ -106,7 +95,23 @@ class App extends React.Component {
 
     }
 
-    // Alert server when client goes online/offline
+    /**************************************
+     * Handle online/offline connections  *
+     **************************************/
+    toggleOnline = () => {
+      this.setState({online: true});
+      this.clients.forEach((client, idx) => {
+        client.toggleOnlineHelper(true);
+      })
+    }
+
+    toggleOffline = () => {
+      this.setState({online: false});
+      this.clients.forEach((client, idx) => {
+        client.toggleOnlineHelper(false);
+      })
+    }
+
     connectionHandler = (clientId, isOnline) => {
       if (isOnline) {
         this.connections[clientId].open();
@@ -115,6 +120,9 @@ class App extends React.Component {
       }
     }
 
+    /********************
+     * Render functions *
+     ********************/
     render = () => {
         let onlineText = this.state.online ? "CURRENTLY LIVE SYNCING" : "CURRENTLY OFFLINE";
         let onlineTextClass = this.state.online ? "online-text green" : "online-text red";
@@ -129,7 +137,7 @@ class App extends React.Component {
                   clientNumber={i}
                   docId={docId}
                   ref={(client) => {this.clients[i] = client}}
-                  broadcast={this.broadcast}
+                  sendMessage={this.sendMessage}
                   online={this.state.online}
                   connectionHandler={this.connectionHandler}
               />
@@ -139,8 +147,6 @@ class App extends React.Component {
 
         return (
           <div>
-            <hr></hr>
-            {clientComponents}
             <hr></hr>
             <div className="options">
               <div className="options-text">Options:</div>
@@ -162,6 +168,8 @@ class App extends React.Component {
                 <button className="online-button" onClick={this.removeClient}>Remove client</button>
               </div>
             </div>
+            <hr></hr>
+            {clientComponents}
           </div>
         )
     }

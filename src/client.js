@@ -28,7 +28,7 @@ const uselessFunction = (a, b) => {
 const plugin = EditList();
 const plugins = [
   plugin
-]
+const plugins = [ plugin ];
 
 function renderNode(props: *) {
     const { node, attributes, children, editor } = props;
@@ -76,7 +76,7 @@ export class Client extends React.Component {
       this.connection = new Automerge.Connection(
         this.docSet,
         (msg) => {
-          this.props.broadcast(this.props.clientNumber, msg)
+          this.props.sendMessage(this.props.clientNumber, msg)
         }
       );
 
@@ -95,7 +95,7 @@ export class Client extends React.Component {
       setTimeout(() => {
         this.connection.open()
         this.docSet.setDoc(this.props.docId, this.doc)
-        this.props.broadcast(this.props.clientNumber, {
+        this.props.sendMessage(this.props.clientNumber, {
           docId: this.props.docId,
           clock: Immutable.Map(),
         })
@@ -180,7 +180,7 @@ export class Client extends React.Component {
         this.props.connectionHandler(this.props.clientNumber, true)
         this.connection.open()
         let clock = this.docSet.getDoc(this.props.docId)._state.getIn(['opSet', 'clock']);
-        this.props.broadcast(this.props.clientNumber, {
+        this.props.sendMessage(this.props.clientNumber, {
           docId: this.props.docId,
           clock: clock,
         })
@@ -221,6 +221,9 @@ export class Client extends React.Component {
       }
     }
 
+    /********************
+     * Render functions *
+     ********************/
     renderHeader = () => {
       let onlineText = this.state.online ? "CURRENTLY LIVE SYNCING" : "CURRENTLY OFFLINE";
       let onlineTextClass = this.state.online ? "client-online-text green" : "client-online-text red";
@@ -249,9 +252,6 @@ export class Client extends React.Component {
       )
     }
 
-    /******************************
-     * RENDER Debugging utilities *
-     ******************************/
     renderInternalClock = () => {
       try {
         let clockList = this.docSet.getDoc(this.props.docId)._state.getIn(['opSet', 'clock']);
@@ -288,9 +288,6 @@ export class Client extends React.Component {
       }
     }
 
-    /*****************
-     * RENDER CLIENT *
-     *****************/
     render = () => {
         return (
             <div>
