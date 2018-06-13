@@ -115,6 +115,8 @@ export class Client extends React.Component {
      * @param {Array} msg - A message created by Automerge.Connection
      */
     updateWithRemoteChanges = ( msg ) => {
+      console.log(`Client ${this.props.clientId} received message:`)
+      console.log(msg)
       const currentDoc = this.docSet.getDoc(this.props.docId)
       const docNew = this.connection.receiveMsg(msg)
       const opSetDiff = Automerge.diff(currentDoc, docNew)
