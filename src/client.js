@@ -267,10 +267,13 @@ export class Client extends React.Component {
           <div>
             <div>Internal clock:</div>
             <table>
-              <tbody>
+              <thead>
                 <tr>
                   <td className="table-cell-left table-cell-header">Actor Id</td>
-                  <td className="table-cell-right table-cell-header">Clock</td></tr>
+                  <td className="table-cell-right table-cell-header">Clock</td>
+                </tr>
+              </thead>
+              <tbody>
                 {clockComponents}
               </tbody>
             </table>

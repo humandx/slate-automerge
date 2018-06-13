@@ -35,7 +35,7 @@ body {
 .client-internal {
     padding-left: 15px;
     width: 25%;
-    position: absolute;
+    /*position: absolute;*/
 }
 
 .table-cell-left {
@@ -64,6 +64,10 @@ body {
 .options-text {
     text-align: center;
     font-weight: bolder;
+}
+
+.options-online {
+    text-align: center;
 }
 
 .online-button {

@@ -63,9 +63,16 @@ class App extends React.Component {
 
     // Toggle if we should sync the clients online or offline.
     toggleOnline = () => {
-      this.setState({online: !this.state.online});
+      this.setState({online: true});
       this.clients.forEach((client, idx) => {
-        client.toggleOnlineHelper(!this.state.online);
+        client.toggleOnlineHelper(true);
+      })
+    }
+
+    toggleOffline = () => {
+      this.setState({online: false});
+      this.clients.forEach((client, idx) => {
+        client.toggleOnlineHelper(false);
       })
     }
 
@@ -137,7 +144,10 @@ class App extends React.Component {
             <hr></hr>
             <div className="options">
               <div className="options-text">Options:</div>
-              {<button className="online-button" onClick={this.toggleOnline}>{toggleButtonText}</button>}
+              <div className="options-online">
+                <button className="online-button" onClick={this.toggleOnline}>All online</button>
+                <button className="online-button" onClick={this.toggleOffline}>All offline</button>
+              </div>
               <div>
                 <span>Number of clients: </span>
                 <input
