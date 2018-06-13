@@ -37,15 +37,21 @@ class App extends React.Component {
     /************************************************
      * Send a change from one client to all others  *
      ************************************************/
-    sendMessage = (clientNumber, message) => {
-      if (this.connections.length <= clientNumber) {
+    /**
+     * @function sendMessage
+     * @desc Receive a message from one of the clients
+     * @param {number} clientId - The server assigned Client Id
+     * @param {Object} message - A message created by Automerge.Connection
+     */
+    sendMessage = (clientId, message) => {
+      if (this.connections.length <= clientId) {
         let connection = new Automerge.Connection(
           this.docSet,
           (message) => {
             // TODO: This is a quick hack since the line right below doesn't work.
-            // this.clients[clientNumber].updateWithRemoteChanges(message);
+            // this.clients[clientId].updateWithRemoteChanges(message);
             this.clients.forEach((client, idx) => {
-              if (clientNumber == idx) {
+              if (clientId == idx) {
                 client.updateWithRemoteChanges(message);
               }
             })
@@ -58,26 +64,46 @@ class App extends React.Component {
       // Need the setTimeout to give time for each client to update it's own
       // Slate Value via setState
       setTimeout(() => {
-        console.log(`Server received message from Client ${clientNumber}`)
-        this.connections[clientNumber].receiveMsg(message)
+        console.log(`Server received message from Client ${clientId}`)
+        this.connections[clientId].receiveMsg(message)
       })
     }
 
     /**************************************
      * Add/remove clients  *
      **************************************/
+    /**
+     * @function updateNumClients
+     * @desc Update the number of clients
+     * @param {Event} event - A Javascript Event
+     */
     updateNumClients = (event) => {
       this.updateNumClientsHelper(event.target.value)
     }
 
+    /**
+     * @function addClient
+     * @desc Add one client
+     * @param {Event} event - A Javascript Event
+     */
     addClient = (event) => {
       this.updateNumClientsHelper(this.state.numClients + 1)
     }
 
+    /**
+     * @function removeClient
+     * @desc Remove one client
+     * @param {Event} event - A Javascript Event
+     */
     removeClient = (event) => {
       this.updateNumClientsHelper(this.state.numClients - 1)
     }
 
+    /**
+     * @function updateNumClientsHelper
+     * @desc Update the number of clients
+     * @param {number} numClients - The number of clients
+     */
     updateNumClientsHelper = (numClients) => {
       const numCurrentClients = this.state.numClients;
       const hasNewClients = numClients > this.state.numClients;
@@ -98,6 +124,10 @@ class App extends React.Component {
     /**************************************
      * Handle online/offline connections  *
      **************************************/
+    /**
+     * @function toggleOnline
+     * @desc Turn all clients online
+     */
     toggleOnline = () => {
       this.setState({online: true});
       this.clients.forEach((client, idx) => {
@@ -105,6 +135,10 @@ class App extends React.Component {
       })
     }
 
+    /**
+     * @function toggleOffline
+     * @desc Turn all clients offline
+     */
     toggleOffline = () => {
       this.setState({online: false});
       this.clients.forEach((client, idx) => {
@@ -112,6 +146,12 @@ class App extends React.Component {
       })
     }
 
+    /**
+     * @function connectionHandler
+     * @desc Turn a specific client online/offline
+     * @param {number} clientId - The Id of the client to turn on/off
+     * @param {boolean} isOnline - Turn online/offline
+     */
     connectionHandler = (clientId, isOnline) => {
       if (isOnline) {
         this.connections[clientId].open();
@@ -134,7 +174,7 @@ class App extends React.Component {
             <div className="client" key={`client-div-${i}`}>
               <Client
                   key={`client-${i}`}
-                  clientNumber={i}
+                  clientId={i}
                   docId={docId}
                   ref={(client) => {this.clients[i] = client}}
                   sendMessage={this.sendMessage}

@@ -26,8 +26,6 @@ const uselessFunction = (a, b) => {
 
 
 const plugin = EditList();
-const plugins = [
-  plugin
 const plugins = [ plugin ];
 
 function renderNode(props: *) {
@@ -76,7 +74,7 @@ export class Client extends React.Component {
       this.connection = new Automerge.Connection(
         this.docSet,
         (msg) => {
-          this.props.sendMessage(this.props.clientNumber, msg)
+          this.props.sendMessage(this.props.clientId, msg)
         }
       );
 
@@ -95,7 +93,7 @@ export class Client extends React.Component {
       setTimeout(() => {
         this.connection.open()
         this.docSet.setDoc(this.props.docId, this.doc)
-        this.props.sendMessage(this.props.clientNumber, {
+        this.props.sendMessage(this.props.clientId, {
           docId: this.props.docId,
           clock: Immutable.Map(),
         })
@@ -151,23 +149,39 @@ export class Client extends React.Component {
       }
     }
 
+    /**
+     * @function updateSlateFromAutomerge
+     * @desc Directly update the Slate Value from Automerge, ignoring Slate
+     *     operations. This is not preferred when syncing documents since it
+     *     causes a re-render and loss of cursor position (and on mobile,
+     *     a re-render drops the keyboard).
+     */
     updateSlateFromAutomerge = () => {
-        const doc = this.docSet.getDoc(this.props.docId)
-        const newJson = automergeJsonToSlate({
-          "document": {...doc.note}
-        })
-        this.setState({ value: Value.fromJSON(newJson) })
+      const doc = this.docSet.getDoc(this.props.docId)
+      const newJson = automergeJsonToSlate({
+        "document": {...doc.note}
+      })
+      this.setState({ value: Value.fromJSON(newJson) })
     }
 
     /**************************************
      * Handle online/offline connections  *
      **************************************/
-    toggleOnline = (event ) => {
+    /**
+     * @function toggleOnline
+     * @desc Turn the client online or offline
+     * @param {Event} event - A Javascript Event
+     */
+    toggleOnline = (event) => {
       this.toggleOnlineHelper(!this.state.online);
     }
 
-    // When client goes online/offline, alert the server and open/close the
-    // connection.
+    /**
+     * @function toggleOnlineHelper
+     * @desc When client goes online/offline, alert the server and open/close
+     *     the connection
+     * @param {boolean} isOnline - If the client should be online.
+     */
     toggleOnlineHelper = (isOnline) => {
       let newOnline;
       if (isOnline === undefined) {
@@ -177,16 +191,16 @@ export class Client extends React.Component {
       }
 
       if (newOnline) {
-        this.props.connectionHandler(this.props.clientNumber, true)
+        this.props.connectionHandler(this.props.clientId, true)
         this.connection.open()
         let clock = this.docSet.getDoc(this.props.docId)._state.getIn(['opSet', 'clock']);
-        this.props.sendMessage(this.props.clientNumber, {
+        this.props.sendMessage(this.props.clientId, {
           docId: this.props.docId,
           clock: clock,
         })
       } else {
         this.connection.close()
-        this.props.connectionHandler(this.props.clientNumber, false)
+        this.props.connectionHandler(this.props.clientId, false)
       }
 
       this.setState({online: newOnline})
@@ -207,7 +221,7 @@ export class Client extends React.Component {
       if (differences.size) {
 
         const currentDoc = this.docSet.getDoc(this.props.docId)
-        const docNew = Automerge.change(currentDoc, `Client ${this.props.clientNumber}`, doc => {
+        const docNew = Automerge.change(currentDoc, `Client ${this.props.clientId}`, doc => {
           // Approach 1 which uses the difference between two Automerge documents
           // to calculate the operations.
           // applyImmutableDiffOperations(doc, differences)
@@ -224,6 +238,10 @@ export class Client extends React.Component {
     /********************
      * Render functions *
      ********************/
+    /**
+     * @function renderHeader
+     * @desc Render the header for the client.
+     */
     renderHeader = () => {
       let onlineText = this.state.online ? "CURRENTLY LIVE SYNCING" : "CURRENTLY OFFLINE";
       let onlineTextClass = this.state.online ? "client-online-text green" : "client-online-text red";
@@ -238,7 +256,7 @@ export class Client extends React.Component {
             <tbody>
               <tr><td colSpan="2" className={onlineTextClass}>{onlineText}</td></tr>
               <tr>
-                <td>Client: {this.props.clientNumber}</td>
+                <td>Client: {this.props.clientId}</td>
                 <td><button className="client-online-button" onClick={this.toggleOnline}>{toggleButtonText}</button></td>
               </tr>
               <tr>
@@ -252,6 +270,10 @@ export class Client extends React.Component {
       )
     }
 
+    /**
+     * @function renderInternalClock
+     * @desc Render the internal clock of Automerge.DocSet for debugging purposes.
+     */
     renderInternalClock = () => {
       try {
         let clockList = this.docSet.getDoc(this.props.docId)._state.getIn(['opSet', 'clock']);
@@ -295,7 +317,7 @@ export class Client extends React.Component {
               <table><tbody>
               <td className="client-editor">
                 <Editor
-                    key={this.props.clientNumber}
+                    key={this.props.clientId}
                     ref={(e) => {this.editor = e}}
                     value={this.state.value}
                     onChange={this.onChange}
