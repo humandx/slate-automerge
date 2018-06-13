@@ -220,27 +220,87 @@ export class Client extends React.Component {
       }
     }
 
+    renderHeader = () => {
+      let onlineText = this.state.online ? "CURRENTLY LIVE SYNCING" : "CURRENTLY OFFLINE";
+      let onlineTextClass = this.state.online ? "client-online-text green" : "client-online-text red";
+      let toggleButtonText = this.state.online ? "GO OFFLINE" : "GO ONLINE";
+
+      let actorId = this.doc._actorId;
+      actorId = actorId.substr(0, actorId.indexOf("-"))
+
+      return (
+        <div>
+          <table className={"client-header"}>
+            <tbody>
+              <tr><td colSpan="2" className={onlineTextClass}>{onlineText}</td></tr>
+              <tr>
+                <td>Client: {this.props.clientNumber}</td>
+                <td><button className="client-online-button" onClick={this.toggleOnline}>{toggleButtonText}</button></td>
+              </tr>
+              <tr><td colSpan="2">Actor Id: {actorId}</td></tr>
+            </tbody>
+          </table>
+          <hr></hr>
+        </div>
+      )
+    }
+
+    /******************************
+     * RENDER Debugging utilities *
+     ******************************/
+    renderInternalClock = () => {
+      try {
+        let clockList = this.docSet.getDoc(this.props.docId)._state.getIn(['opSet', 'clock']);
+        let clockComponents = [];
+        clockList.forEach((value, actorId) => {
+
+          actorId = actorId.substr(0, actorId.indexOf("-"))
+
+          clockComponents.push(
+            <tr key={`internal-clock-${actorId}`}>
+              <td className="table-cell-left">{actorId}</td>
+              <td className="table-cell-right">{value}</td>
+            </tr>
+          )
+        })
+        return (
+          <div>
+            <div>Internal clock (for debugging)</div>
+            <table>
+              <tbody>
+                <tr>
+                  <td className="table-cell-left table-cell-header">Actor Id</td>
+                  <td className="table-cell-right table-cell-header">Clock</td></tr>
+                {clockComponents}
+              </tbody>
+            </table>
+          </div>
+        )
+      } catch (err) {
+        return null;
+      }
+    }
+
     /*****************
      * RENDER CLIENT *
      *****************/
     render = () => {
-        let onlineText = this.state.online ? "CURRENTLY LIVE SYNCING" : "CURRENTLY OFFLINE";
-        let onlineTextClass = this.state.online ? "client-online-text green" : "client-online-text red";
-        let toggleButtonText = this.state.online ? "GO OFFLINE" : "GO ONLINE";
-
         return (
             <div>
-              <div className={onlineTextClass}>{onlineText}</div>
-              <span><u>Client: {this.props.clientNumber}</u></span>
-              <button className="client-online-button" onClick={this.toggleOnline}>{toggleButtonText}</button>
-              <Editor
-                  key={this.props.clientNumber}
-                  ref={(e) => {this.editor = e}}
-                  value={this.state.value}
-                  onChange={this.onChange}
-                  renderNode={renderNode}
-                  plugins={plugins}
-              />
+              {this.renderHeader()}
+              <div className="client-editor">
+                <Editor
+                    key={this.props.clientNumber}
+                    ref={(e) => {this.editor = e}}
+                    value={this.state.value}
+                    onChange={this.onChange}
+                    renderNode={renderNode}
+                    plugins={plugins}
+                />
+              </div>
+              <div className="client-internal">
+                {this.renderInternalClock()}
+              </div>
             </div>
         )
     }

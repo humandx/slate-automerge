@@ -20,6 +20,41 @@ body {
     padding: 1%;
 }
 
+.client-header {
+    width: 100%;
+}
+
+.client-editor {
+    display: inline-block;
+    width: 70%;
+    border-right-color: black;
+    border-right-style: solid;
+    border-right-width: 1px;
+}
+
+.client-internal {
+    display: inline-block;
+    float: right;
+    width: 30%;
+}
+
+.table-cell-left {
+    border-right-color: black;
+    border-right-style: solid;
+    border-right-width: 1px;
+    padding-right: 5px;
+}
+
+.table-cell-right {
+
+}
+
+.table-cell-header {
+    border-bottom-color: black;
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+}
+
 .options {
     width: fit-content;
     display: block;
@@ -44,6 +79,7 @@ body {
 
 .client-online-button {
     float: right;
+    padding: 5px;
 }
 
 .green {
