@@ -26,7 +26,7 @@ class App extends React.Component {
 
       this.state = {
         online: true,
-        numClients: 2,
+        numClients: 1,
       }
     }
 
@@ -69,20 +69,11 @@ class App extends React.Component {
     }
 
     render = () => {
-        let onlineText;
-        let onlineTextClass;
-        let toggleButtonText;
-        if (this.state.online) {
-          onlineText = "CURRENTLY LIVE SYNCING"
-          onlineTextClass = "online-text green"
-          toggleButtonText = "GO OFFLINE"
-        } else {
-          onlineText = "CURRENTLY OFFLINE"
-          onlineTextClass = "online-text red"
-          toggleButtonText = "GO ONLINE"
-        }
-
+        let onlineText = this.state.online ? "CURRENTLY LIVE SYNCING" : "CURRENTLY OFFLINE";
+        let onlineTextClass = this.state.online ? "online-text green" : "online-text red";
+        let toggleButtonText = this.state.online ? "GO OFFLINE" : "GO ONLINE";
         let clientComponents = [];
+
         for (let i = 0; i < this.state.numClients; i++) {
           clientComponents.push(
             <div className="client" key={`client-div-${i}`}>
@@ -91,7 +82,7 @@ class App extends React.Component {
                   clientNumber={i}
                   docId={docId}
                   ref={(client) => {this.client[i] = client}}
-                  savedAutomergeDoc={savedAutomergeDoc}
+                  savedAutomergeDoc={i == 0 ? savedAutomergeDoc : null}
                   broadcast={this.broadcast}
                   online={this.state.online}
               />
