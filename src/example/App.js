@@ -1,6 +1,6 @@
 import React from 'react'
 import { Value } from 'slate'
-import slateCustomToJson from "../utils/slateCustomToJson"
+import slateCustomToJson from "../libs/slateCustomToJson"
 import Automerge from 'automerge'
 import { Client } from "./client"
 import { initialValue } from "../utils/initialSlateValue"
@@ -44,23 +44,6 @@ class App extends React.Component {
      * @param {Object} message - A message created by Automerge.Connection
      */
     sendMessage = (clientId, message) => {
-        if (this.connections.length <= clientId) {
-            let connection = new Automerge.Connection(
-                this.docSet,
-                (message) => {
-                    // TODO: This is a quick hack since the line right below doesn't work.
-                    // this.clients[clientId].updateWithRemoteChanges(message);
-                    this.clients.forEach((client, idx) => {
-                        if (clientId === idx) {
-                            client.updateWithRemoteChanges(message);
-                        }
-                    })
-                }
-            )
-            connection.open()
-            this.connections.push(connection)
-        }
-
         // Need the setTimeout to give time for each client to update it's own
         // Slate Value via setState
         setTimeout(() => {
@@ -107,7 +90,6 @@ class App extends React.Component {
     updateNumClientsHelper = (numClients) => {
         const updateNewClients = () => {
             this.clients = this.clients.slice(0, numClients);
-            this.connections = this.connections.slice(0, numClients);
         }
 
         if (numClients < 0 || numClients > maxClients) {
@@ -128,7 +110,7 @@ class App extends React.Component {
     toggleOnline = () => {
         this.setState({ online: true });
         this.clients.forEach((client, idx) => {
-            client.toggleOnlineHelper(true);
+            client.toggleOnline(true);
         })
     }
 
@@ -139,7 +121,7 @@ class App extends React.Component {
     toggleOffline = () => {
         this.setState({ online: false });
         this.clients.forEach((client, idx) => {
-            client.toggleOnlineHelper(false);
+            client.toggleOnline(false);
         })
     }
 
@@ -151,9 +133,29 @@ class App extends React.Component {
      */
     connectionHandler = (clientId, isOnline) => {
         if (isOnline) {
+
+            if (this.connections[clientId] === undefined || this.connections[clientId] === null) {
+                let connection = new Automerge.Connection(
+                    this.docSet,
+                    (message) => {
+                        // TODO: This is a quick hack since the line right below doesn't work.
+                        // this.clients[clientId].updateWithRemoteChanges(message);
+                        this.clients.forEach((client, idx) => {
+                            if (clientId === idx) {
+                                client.updateWithRemoteChanges(message);
+                            }
+                        })
+                    }
+                )
+                this.connections[clientId] = connection;
+            }
+
             this.connections[clientId].open();
         } else {
-            this.connections[clientId].close();
+            if (this.connections[clientId]) {
+                this.connections[clientId].close();
+                this.connections[clientId] = null;
+            }
         }
     }
 

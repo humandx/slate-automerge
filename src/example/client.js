@@ -2,16 +2,15 @@
  * The Slate client.
  */
 
-// import { applyImmutableDiffOperations } from "./utils/immutableDiffToAutomerge"
-import { applySlateOperations } from "../utils/slateOpsToAutomerge"
-import { convertAutomergeToSlateOps } from "../utils/convertAutomergeToSlateOps"
+import { applySlateOperations } from "../libs/slateOpsToAutomerge"
+import { convertAutomergeToSlateOps } from "../libs/convertAutomergeToSlateOps"
 import { Editor } from 'slate-react'
 import { Value } from 'slate'
 import Automerge from 'automerge'
 import Immutable from "immutable";
 import React from 'react'
 import EditList from 'slate-edit-list'
-import automergeJsonToSlate from "../utils/automergeJsonToSlate"
+import automergeJsonToSlate from "../libs/automergeJsonToSlate"
 import './client.css';
 
 /**
@@ -28,7 +27,7 @@ const uselessFunction = (a, b) => {
 const plugin = EditList();
 const plugins = [plugin];
 
-function renderNode(props: *) {
+function renderNode(props) {
     const { node, attributes, children, editor } = props;
     const isCurrentItem = plugin.utils
         .getItemsAtRange(editor.value)
@@ -76,12 +75,12 @@ export class Client extends React.Component {
             (msg) => {
                 this.props.sendMessage(this.props.clientId, msg)
             }
-        );
+        )
 
         const initialValue = automergeJsonToSlate({
             "document": { ...this.doc.note }
         })
-        const initialSlateValue = Value.fromJSON(initialValue);
+        const initialSlateValue = Value.fromJSON(initialValue)
 
         this.state = {
             value: initialSlateValue,
@@ -90,20 +89,21 @@ export class Client extends React.Component {
     }
 
     componentDidMount = () => {
-        setTimeout(() => {
-            this.connection.open()
-            this.docSet.setDoc(this.props.docId, this.doc)
-            this.props.sendMessage(this.props.clientId, {
-                docId: this.props.docId,
-                clock: Immutable.Map(),
-            })
-        })
+        this.initializeConnection()
     }
 
-    componentWillReceiveProps = (nextProps) => {
-        if (this.props.online !== nextProps.online) {
-            this.setState({ online: nextProps.online })
-        }
+    componentWillUnmount = () => {
+        this.props.connectionHandler(this.props.clientId, false)
+    }
+
+    initializeConnection = () => {
+        this.connection.open()
+        this.docSet.setDoc(this.props.docId, this.doc)
+        this.props.sendMessage(this.props.clientId, {
+            docId: this.props.docId,
+            clock: Immutable.Map(),
+        })
+        this.props.connectionHandler(this.props.clientId, true)
     }
 
     /***************************************
@@ -172,17 +172,17 @@ export class Client extends React.Component {
      * @desc Turn the client online or offline
      * @param {Event} event - A Javascript Event
      */
-    toggleOnline = (event) => {
-        this.toggleOnlineHelper(!this.state.online);
+    toggleOnlineButton = (event) => {
+        this.toggleOnline(!this.state.online);
     }
 
     /**
-     * @function toggleOnlineHelper
+     * @function toggleOnline
      * @desc When client goes online/offline, alert the server and open/close
      *     the connection
      * @param {boolean} isOnline - If the client should be online.
      */
-    toggleOnlineHelper = (isOnline) => {
+    toggleOnline = (isOnline) => {
         let newOnline;
         if (isOnline === undefined) {
             newOnline = !this.state.online;
@@ -252,7 +252,7 @@ export class Client extends React.Component {
                         <tr><td colSpan="2" className={onlineTextClass}>{onlineText}</td></tr>
                         <tr>
                             <td>Client: {this.props.clientId}</td>
-                            <td><button className="client-online-button" onClick={this.toggleOnline}>{toggleButtonText}</button></td>
+                            <td><button className="client-online-button" onClick={this.toggleOnlineButton}>{toggleButtonText}</button></td>
                         </tr>
                         <tr>
                             <td>{this.props.debuggingMode && <span>Actor Id: {actorId}</span>}</td>
