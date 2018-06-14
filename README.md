@@ -1,21 +1,26 @@
+# Slate Automerge Example
+
+A example of a collaborative editor using [Slate](https://github.com/ianstormtaylor/slate) and [Automerge](https://github.com/automerge/automerge). This example uses Automerge's CRDT algorithm to synchronize changes between connected clients and works for both on-line and off-line clients. When an off-line client reconnects to the network, it pushes it's own changes and grabs the latest changes, using Automerge's algorithm to merge the changes.
+
+The primary contribution of this repo is the development of the bridge between Slate and Automerge's data structures and the example to demonstrate it's functionality.
+
 ## Installation instructions
 
-`./install_packages` - to install all dependencies. This installs all dependencies along with the path-from-root branch of Automerge which is also up-to-date with master.
+This installs all dependencies along with the path-from-root branch of Automerge which is also up-to-date with master.
+```./install_packages```
 
-`yarn start` - to run the webserver
+To run the development webserver:
+```yarn start```
 
 ## How to use
 
-After starting the development server, go to `http://localhost:3000` where you
-will see various number of clients. When the "CURRENTLY LIVE SYNCING" banner is
-up, all changes to any client will be broadcasted to all other clients. When the
-"CURRENTLY OFFLINE" banner is up, no changes are send until the "sync" button is
-clicked.
+After starting the development server, go to `http://localhost:3000` where you will see various number of clients.
 
-You can also update the number of clients dynamically.
+For each client, you can turn the client on-line/off-line.
+At the "server" level, you can turn all clients on/off and view debugging information.
 
 ## Code
-- `App.js` setups up the initial Slate and Automerge document, instantiates the clients, and acts as the network layer between the clients.
+- `App.js` setups up the initial Slate and Automerge document, instantiates the clients, and acts as the server and network layer between the clients.
 - `client.js` is the Slate client.
 - `utils` folder contains most of the logic that converts operations between Slate and Automerge. In other words, it's the bridge between the two worlds.
 
