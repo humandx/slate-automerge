@@ -24,6 +24,10 @@ body {
     width: 100%;
 }
 
+.client-table {
+    width: 100%;
+}
+
 .client-editor {
     padding-right: 15px;
     width: 75%;

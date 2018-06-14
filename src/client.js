@@ -314,7 +314,7 @@ export class Client extends React.Component {
         return (
             <div>
               {this.renderHeader()}
-              <table><tbody><tr>
+              <table className="client-table"><tbody><tr>
                 <td className="client-editor">
                   <Editor
                       key={this.props.clientId}
