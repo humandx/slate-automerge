@@ -1,5 +1,4 @@
 import React from 'react'
-import Immutable from "immutable";
 import { Value } from 'slate'
 import slateCustomToJson from "./utils/slateCustomToJson"
 import Automerge from 'automerge'
@@ -7,137 +6,179 @@ import { Client } from "./client"
 import { initialValue } from "./utils/initialAutomergeDoc"
 
 
+const docId = 1;
 let doc = Automerge.init();
 const initialSlateValue = Value.fromJSON(initialValue);
 doc = Automerge.change(doc, 'Initialize Slate state', doc => {
   doc.note = slateCustomToJson(initialSlateValue.document);
 })
-const savedAutomergeDoc = Automerge.save(doc);
+// const savedAutomergeDoc = Automerge.save(doc);
 const maxClients = 6;
+
 
 class App extends React.Component {
 
     constructor(props) {
       super(props)
 
-      this.broadcast = this.broadcast.bind(this);
-      this.client = [];
+      this.sendMessage = this.sendMessage.bind(this);
+      this.clients = [];
+      this.docSet = new Automerge.DocSet();
+      this.docSet.setDoc(docId, doc);
+      this.connections = [];
 
       this.state = {
         online: true,
-        numClients: 2,
+        numClients: 1,
+        debuggingMode: false,
       }
     }
 
+    /************************************************
+     * Send a change from one client to all others  *
+     ************************************************/
     /**
-     * NOT USED
+     * @function sendMessage
+     * @desc Receive a message from one of the clients
+     * @param {number} clientId - The server assigned Client Id
+     * @param {Object} message - A message created by Automerge.Connection
      */
-    offlineSyncUsingMerge = () => {
-      let docs = [];
-      this.client.forEach((client, idx) => {
-        docs[idx] = client.getAutomergeDoc();
-      });
-
-      let mergedDoc = docs[0];
-      docs.forEach((nextDoc, idx) => {
-        if (idx === 0) return;
-        mergedDoc = Automerge.merge(mergedDoc, nextDoc);
-      });
-
-      this.client.forEach((client, idx) => {
-        client.updateWithNewAutomergeDoc(mergedDoc);
-      });
-    }
-
-    // Sync all clients.
-    offlineSync = () => {
-      // Get all stored changes from all clients.
-      let changesList = [];
-      this.client.forEach((client, idx) => {
-        changesList[idx] = client.getStoredLocalChanges();
-      });
-
-      // Send all relevant changes to all clients.
-      this.client.forEach((client, clientIdx) => {
-        let allChanges = Immutable.List();
-        changesList.forEach((changes, changeIdx) => {
-          if (clientIdx !== changeIdx) {
-            allChanges = allChanges.concat(changes);
+    sendMessage = (clientId, message) => {
+      if (this.connections.length <= clientId) {
+        let connection = new Automerge.Connection(
+          this.docSet,
+          (message) => {
+            // TODO: This is a quick hack since the line right below doesn't work.
+            // this.clients[clientId].updateWithRemoteChanges(message);
+            this.clients.forEach((client, idx) => {
+              if (clientId === idx) {
+                client.updateWithRemoteChanges(message);
+              }
+            })
           }
-        });
-        client.updateWithBatchedRemoteChanges(allChanges);
-      });
-    }
+        )
+        connection.open()
+        this.connections.push(connection)
+      }
 
-    // Broadcast a change from one client to all others.
-    broadcast = (clientNumber, changes) => {
-      this.client.forEach((client, idx) => {
-        if (clientNumber !== idx) {
-          setTimeout(() => {
-            client.updateWithRemoteChanges(changes);
-          })
-        }
+      // Need the setTimeout to give time for each client to update it's own
+      // Slate Value via setState
+      setTimeout(() => {
+        console.log(`Server received message from Client ${clientId}`)
+        this.connections[clientId].receiveMsg(message)
       })
     }
 
-    // Toggle if we should sync the clients online or offline.
-    toggleOnline = () => {
-      // If going online from offline, make sure all clients are synced.
-      if (!this.state.online) {
-        this.offlineSync();
-      }
-      this.setState({online: !this.state.online});
+    /**************************************
+     * Add/remove clients  *
+     **************************************/
+    /**
+     * @function updateNumClients
+     * @desc Update the number of clients
+     * @param {Event} event - A Javascript Event
+     */
+    updateNumClients = (event) => {
+      this.updateNumClientsHelper(event.target.value)
     }
 
-    // Change the number of clients
-    updateNumClients = (event) => {
-      const numClients = event.target.value;
+    /**
+     * @function addClient
+     * @desc Add one client
+     * @param {Event} event - A Javascript Event
+     */
+    addClient = (event) => {
+      this.updateNumClientsHelper(this.state.numClients + 1)
+    }
 
-      const numCurrentClients = this.state.numClients;
-      const hasNewClients = numClients > this.state.numClients;
+    /**
+     * @function removeClient
+     * @desc Remove one client
+     * @param {Event} event - A Javascript Event
+     */
+    removeClient = (event) => {
+      this.updateNumClientsHelper(this.state.numClients - 1)
+    }
+
+    /**
+     * @function updateNumClientsHelper
+     * @desc Update the number of clients
+     * @param {number} numClients - The number of clients
+     */
+    updateNumClientsHelper = (numClients) => {
       const updateNewClients = () => {
-        if (hasNewClients) {
-          const doc = this.client[0].getAutomergeDoc();
-          for (let i = numCurrentClients; i < numClients; i++) {
-            this.client[i].updateWithNewAutomergeDoc(doc);
-          }
-        } else {
-          this.client = this.client.slice(0, numClients);
-        }
+        this.clients = this.clients.slice(0, numClients);
+        this.connections = this.connections.slice(0, numClients);
       }
 
-      if (numClients <= 0 || numClients > maxClients) {
+      if (numClients < 0 || numClients > maxClients) {
         return;
       } else {
         this.setState({numClients: numClients}, updateNewClients);
       }
+
     }
 
-    render = () => {
-        let onlineText;
-        let onlineTextClass;
-        let toggleButtonText;
-        if (this.state.online) {
-          onlineText = "CURRENTLY LIVE SYNCING"
-          onlineTextClass = "online-text green"
-          toggleButtonText = "GO OFFLINE"
-        } else {
-          onlineText = "CURRENTLY OFFLINE"
-          onlineTextClass = "online-text red"
-          toggleButtonText = "GO ONLINE"
-        }
+    /**************************************
+     * Handle online/offline connections  *
+     **************************************/
+    /**
+     * @function toggleOnline
+     * @desc Turn all clients online
+     */
+    toggleOnline = () => {
+      this.setState({online: true});
+      this.clients.forEach((client, idx) => {
+        client.toggleOnlineHelper(true);
+      })
+    }
 
+    /**
+     * @function toggleOffline
+     * @desc Turn all clients offline
+     */
+    toggleOffline = () => {
+      this.setState({online: false});
+      this.clients.forEach((client, idx) => {
+        client.toggleOnlineHelper(false);
+      })
+    }
+
+    /**
+     * @function connectionHandler
+     * @desc Turn a specific client online/offline
+     * @param {number} clientId - The Id of the client to turn on/off
+     * @param {boolean} isOnline - Turn online/offline
+     */
+    connectionHandler = (clientId, isOnline) => {
+      if (isOnline) {
+        this.connections[clientId].open();
+      } else {
+        this.connections[clientId].close();
+      }
+    }
+
+    toggleDebugging = () => {
+      this.setState({debuggingMode: !this.state.debuggingMode})
+    }
+
+    /********************
+     * Render functions *
+     ********************/
+    render = () => {
         let clientComponents = [];
+
         for (let i = 0; i < this.state.numClients; i++) {
           clientComponents.push(
             <div className="client" key={`client-div-${i}`}>
               <Client
                   key={`client-${i}`}
-                  clientNumber={i}
-                  ref={(client) => {this.client[i] = client}}
-                  savedAutomergeDoc={savedAutomergeDoc}
-                  broadcast={this.broadcast}
+                  clientId={i}
+                  docId={docId}
+                  ref={(client) => {this.clients[i] = client}}
+                  sendMessage={this.sendMessage}
                   online={this.state.online}
+                  connectionHandler={this.connectionHandler.bind(this)}
+                  debuggingMode={this.state.debuggingMode}
               />
             </div>
           );
@@ -145,16 +186,13 @@ class App extends React.Component {
 
         return (
           <div>
-            <div className={onlineTextClass}>{onlineText}</div>
-            <hr></hr>
-            {clientComponents}
             <hr></hr>
             <div className="options">
               <div className="options-text">Options:</div>
-              <button className="online-button" onClick={this.toggleOnline}>{toggleButtonText}</button>
-              {!this.state.online &&
-                  <button className="online-button" onClick={this.offlineSync}>Sync</button>
-              }
+              <div className="options-online">
+                <button className="online-button" onClick={this.toggleOnline}>All online</button>
+                <button className="online-button" onClick={this.toggleOffline}>All offline</button>
+              </div>
               <div>
                 <span>Number of clients: </span>
                 <input
@@ -165,8 +203,15 @@ class App extends React.Component {
                   min={1}
                   max={maxClients}
                 />
+                <button className="online-button" onClick={this.addClient}>Add client</button>
+                <button className="online-button" onClick={this.removeClient}>Remove client</button>
+              </div>
+              <div>
+                <button className="online-button" onClick={this.toggleDebugging}>Toggle debugging</button>
               </div>
             </div>
+            <hr></hr>
+            {clientComponents}
           </div>
         )
     }

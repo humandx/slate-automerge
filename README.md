@@ -28,12 +28,12 @@ Flow of when a change is made on Client A and broadcast to Client B:
 2) The onChange function in Client A is fired.
 * The Slate Value is stored on the client.
 * The Slate Operations are transformed to Automerge JSON operations (in applySlateOperations) and applied to the Automerge document.
-* If online, the Automerge changes (calculated by Automerge.getChanges) is broadcast to all other clients. If offline, the change is stored until the client goes online.
+* If online, the Automerge changes (calculated by `Automerge.getChanges`) is broadcast to all other clients via `Automerge.Connection`. If offline, when the client comes back online, it syncs all changes also via `Automerge.Connection`.
 
 3) Client B receives an event with the changes.
 * Client B's Automerge document applies the changes from Client A.
 * The differences between the Client B's new and old Automerge documents are computed (using Automerge.diff).
-* The differences are converted to Slate Operations (in convertAutomergeToSlateOps) and applied to Client B's Slate Value.
+* The differences are converted to Slate Operations (in `convertAutomergeToSlateOps`) and applied to Client B's Slate Value.
 
 ## Things to note:
 1) Using the same Client as above, the Slate Operations on Client A will NOT be the same as the transformed Slate Operations on Client B. For example, when splitting a node on Client A (hit [ENTER] in the middle of a sentence), Slate on Client A will issue a `split_node` change operation. On Client B, the operations might be many `remove_text` operations and an `insert_node` operation. This should be fine since we're using the Automerge document as the "ground truth".
