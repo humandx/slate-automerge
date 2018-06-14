@@ -104,27 +104,17 @@ class App extends React.Component {
      * Handle online/offline connections  *
      **************************************/
     /**
-     * @function toggleOnline
-     * @desc Turn all clients online
+     * @function toggleConnection
+     * @desc Turn all clients on/off
      */
-    toggleOnline = () => {
-        this.setState({ online: true });
+    toggleConnection = (isOnline) => {
+        this.setState({ online: isOnline });
         this.clients.forEach((client, idx) => {
-            client.toggleOnline(true);
+            client.toggleConnection(isOnline);
         })
     }
 
     /**
-     * @function toggleOffline
-     * @desc Turn all clients offline
-     */
-    toggleOffline = () => {
-        this.setState({ online: false });
-        this.clients.forEach((client, idx) => {
-            client.toggleOnline(false);
-        })
-    }
-
     /**
      * @function connectionHandler
      * @desc Turn a specific client online/offline
@@ -192,8 +182,8 @@ class App extends React.Component {
                 <div className="options">
                     <div className="options-text">Options:</div>
                     <div className="options-online">
-                        <button className="online-button" onClick={this.toggleOnline}>All online</button>
-                        <button className="online-button" onClick={this.toggleOffline}>All offline</button>
+                        <button className="online-button" onClick={() => { this.toggleConnection(true) }}>All online</button>
+                        <button className="online-button" onClick={() => { this.toggleConnection(false) }}>All offline</button>
                     </div>
                     <div>
                         <span>Number of clients: </span>

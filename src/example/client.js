@@ -13,16 +13,6 @@ import EditList from 'slate-edit-list'
 import automergeJsonToSlate from "../libs/automergeJsonToSlate"
 import './client.css';
 
-/**
- * @function uselessFunction
- * @desc This is a completely useless function but for some odd reason, the
- *     sync-ing fails to work if I remove this function... I have absolutely no
- *     idea why...
- */
-const uselessFunction = (a, b) => {
-    return Immutable.is(a, b) ? Immutable.List() : Immutable.List([""]);
-};
-
 
 const plugin = EditList();
 const plugins = [plugin];
@@ -168,29 +158,22 @@ export class Client extends React.Component {
      * Handle online/offline connections  *
      **************************************/
     /**
-     * @function toggleOnline
+     * @function toggleConnection
      * @desc Turn the client online or offline
      * @param {Event} event - A Javascript Event
      */
-    toggleOnlineButton = (event) => {
-        this.toggleOnline(!this.state.online);
+    toggleConnectionButton = (event) => {
+        this.toggleConnection(!this.state.online);
     }
 
     /**
-     * @function toggleOnline
+     * @function toggleConnection
      * @desc When client goes online/offline, alert the server and open/close
      *     the connection
      * @param {boolean} isOnline - If the client should be online.
      */
-    toggleOnline = (isOnline) => {
-        let newOnline;
-        if (isOnline === undefined) {
-            newOnline = !this.state.online;
-        } else {
-            newOnline = isOnline;
-        }
-
-        if (newOnline) {
+    toggleConnection = (isOnline) => {
+        if (isOnline) {
             this.props.connectionHandler(this.props.clientId, true)
             this.connection.open()
             let clock = this.docSet.getDoc(this.props.docId)._state.getIn(['opSet', 'clock']);
@@ -202,30 +185,20 @@ export class Client extends React.Component {
             this.connection.close()
             this.props.connectionHandler(this.props.clientId, false)
         }
-
-        this.setState({ online: newOnline })
+        this.setState({ online: isOnline })
     }
 
     /**************************************
      * UPDATE CLIENT FROM LOCAL OPERATION *
      **************************************/
     onChange = ({ operations, value }) => {
-
-        const differences = uselessFunction(this.state.value.document, value.document);
-
         this.setState({ value: value })
-
-        // Run only if the Slate value has changed.
-        // For some reason, when I don't have this nearly trivial condition,
-        // the syncing doesn't work as I expect. I still need to investigate why.
-        if (differences.size) {
-
-            const currentDoc = this.docSet.getDoc(this.props.docId)
+        const currentDoc = this.docSet.getDoc(this.props.docId)
+        if (currentDoc) {
             const docNew = Automerge.change(currentDoc, `Client ${this.props.clientId}`, doc => {
                 // Use the Slate operations to modify the Automerge document.
                 applySlateOperations(doc, operations)
             })
-
             this.docSet.setDoc(this.props.docId, docNew);
         }
     }
@@ -252,7 +225,7 @@ export class Client extends React.Component {
                         <tr><td colSpan="2" className={onlineTextClass}>{onlineText}</td></tr>
                         <tr>
                             <td>Client: {this.props.clientId}</td>
-                            <td><button className="client-online-button" onClick={this.toggleOnlineButton}>{toggleButtonText}</button></td>
+                            <td><button className="client-online-button" onClick={this.toggleConnectionButton}>{toggleButtonText}</button></td>
                         </tr>
                         <tr>
                             <td>{this.props.debuggingMode && <span>Actor Id: {actorId}</span>}</td>
@@ -274,9 +247,7 @@ export class Client extends React.Component {
             let clockList = this.docSet.getDoc(this.props.docId)._state.getIn(['opSet', 'clock']);
             let clockComponents = [];
             clockList.forEach((value, actorId) => {
-
                 actorId = actorId.substr(0, actorId.indexOf("-"))
-
                 clockComponents.push(
                     <tr key={`internal-clock-${actorId}`}>
                         <td className="table-cell-left">{actorId}</td>
