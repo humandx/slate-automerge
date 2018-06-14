@@ -36,6 +36,7 @@ const automergeOpCreate = (op, objIdMap) => {
 const automergeOpRemove = (op, objIdMap, value) => {
     let pathString, slatePath, slateOp
     pathString = op.path.slice(1).join("/")
+    const lastObjectType = op.path[op.path.length-1];
     if (pathString) {
       pathString = pathString.match(/\d+/g)
     } else {
@@ -57,8 +58,8 @@ const automergeOpRemove = (op, objIdMap, value) => {
     // FIXME: Is the Slate's Value reliable enough to get the node type?
     // Use the document to be changed
     let removeNode = value.document.getNodeAtPath(slatePath)
-    switch (removeNode.object) {
-      case 'text':
+    switch (lastObjectType) {
+      case 'characters':
         slateOp = {
           type: 'remove_text',
           path: slatePath,
@@ -67,15 +68,13 @@ const automergeOpRemove = (op, objIdMap, value) => {
           marks: []
         }
         break;
-      case 'block':
+      case 'nodes':
         if (removeNode.type !== "paragraph") {
-          removeNode = removeNode.nodes.get(op.index);
           slatePath = [...slatePath, op.index];
         }
         slateOp = {
           type: 'remove_node',
           path: slatePath,
-          node: removeNode
         }
         break;
       default:
