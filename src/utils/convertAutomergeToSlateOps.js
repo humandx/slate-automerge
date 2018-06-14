@@ -9,6 +9,7 @@ import automergeJsonToSlate from "./automergeJsonToSlate"
  * @desc Handles the `create` Automerge operation
  * @param {Object} op - Automerge operation
  * @param {Object} objIdMap - Map from the objectId to created object
+ * @return {Object} Map from Object Id to Object
  */
 const automergeOpCreate = (op, objIdMap) => {
   switch (op.type) {
@@ -29,8 +30,8 @@ const automergeOpCreate = (op, objIdMap) => {
  * @desc Handles the `remove` Automerge operation
  * @param {Object} op - Automerge operation
  * @param {Object} objIdMap - Map from the objectId to created object
- * @param {Array} slateOps - List of created Slate operations
  * @param {Value} value - the Slate Value
+ * @return {List} The corresponding Slate Operations for this operation
  */
 const automergeOpRemove = (op, objIdMap, value) => {
     let pathString, slatePath, slateOp
@@ -88,6 +89,7 @@ const automergeOpRemove = (op, objIdMap, value) => {
  * @desc Handles the `set` Automerge operation
  * @param {Object} op - Automerge operation
  * @param {Object} objIdMap - Map from the objectId to created object
+ * @return {Object} Map from Object Id to Object
  */
 const automergeOpSet = (op, objIdMap) => {
     if (op.hasOwnProperty('link')) {
@@ -114,7 +116,7 @@ const automergeOpSet = (op, objIdMap) => {
  * @desc Handles the `insert` Automerge operation
  * @param {Object} op - Automerge operation
  * @param {Object} objIdMap - Map from the objectId to created object
- * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
+ * @return {Object} Containing the map from Object Id to Object and deferred operation
  */
 const automergeOpInsert = (op, objIdMap) => {
     if (op.link) {
@@ -125,13 +127,6 @@ const automergeOpInsert = (op, objIdMap) => {
       } else {
         return {objIdMap: objIdMap, deferredOps: op}
       }
-      // else if (pathMap.hasOwnProperty(op.obj)) {
-      //   deferredOps.push(op)
-      // }
-      // else {
-      //   // TODO: Does this ever happen?
-      //   console.error('`insert`, unable to find objectId: ', op.obj)
-      // }
     }
     else {
       // TODO: Does this ever happen?
@@ -147,6 +142,7 @@ const automergeOpInsert = (op, objIdMap) => {
  * @param {Object} objIdMap - Map from the objectId to created object
  * @param {Array} slateOps - List of created Slate operations
  * @param {Value} value - the Slate Value
+ * @return {Array} List of list of Slate operations
  */
 const automergeOpInsertText = (deferredOps, objIdMap, slateOps, value) => {
   // We know all ops in this list have the following conditions true:
@@ -236,14 +232,15 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps, value) => {
     }
     slateOps[idx] = slateOp
   })
+  return slateOps
 }
 
 /**
  * @function convertAutomergeToSlateOps
  * @desc Converts Automerge operations to Slate operations.
  * @param {Array} automergeOps - a list of Automerge operations created from Automerge.diff
- * @param {Object} pathMap - the map created by mapObjectIdToPath.js of the new Automerge document
  * @param {Value} value - the Slate Value
+ * @return {Array} List of Slate operations
  */
 export const convertAutomergeToSlateOps = (automergeOps, value) => {
   // To build objects from Automerge operations
@@ -279,13 +276,18 @@ export const convertAutomergeToSlateOps = (automergeOps, value) => {
   if (containsDeferredOps) {
     automergeOpInsertText(deferredOps, objIdMap, slateOps, value);
   }
-  const flatOps = flattenList(slateOps);
-  return flatOps;
+  return flattenArray(slateOps);
 }
 
-const flattenList = (list) => {
+/**
+ * @function flattenArray
+ * @desc Flattens an array of lists
+ * @param {Array} array_of_lists - an array of list of Slate operations
+ * @return {Array} Array of Slate operations
+ */
+const flattenArray = (array_of_lists) => {
   let newList = []
-  list.forEach((items) => {
+  array_of_lists.forEach((items) => {
     if (items !== null) {
       items.forEach((item) => {newList.push(item)})
     }
