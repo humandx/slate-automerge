@@ -144,8 +144,8 @@ export class Client extends React.Component {
       } catch (e) {
         // If an error occurs, release the Slate Value based on the Automerge
         // document, which is the ground truth.
-        console.debug("The following warning is fine:")
-        console.debug(e)
+        console.info("The following warning is fine:")
+        console.info(e)
         this.updateSlateFromAutomerge()
       }
     }
@@ -261,7 +261,7 @@ export class Client extends React.Component {
                 <td><button className="client-online-button" onClick={this.toggleOnline}>{toggleButtonText}</button></td>
               </tr>
               <tr>
-                <td>Actor Id: {actorId}</td>
+                <td>{this.props.debuggingMode && <span>Actor Id: {actorId}</span>}</td>
                 <td><button className="client-online-button" onClick={this.updateSlateFromAutomerge}>Sync Slate</button></td>
               </tr>
             </tbody>
@@ -326,9 +326,9 @@ export class Client extends React.Component {
                       plugins={plugins}
                   />
                 </td>
-                <td className="client-internal">
+                {this.props.debuggingMode && <td className="client-internal">
                   {this.renderInternalClock()}
-                </td>
+                </td>}
               </tr></tbody></table>
             </div>
         )

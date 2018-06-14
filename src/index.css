@@ -25,9 +25,6 @@ body {
 }
 
 .client-editor {
-    border-right-color: black;
-    border-right-style: solid;
-    border-right-width: 1px;
     padding-right: 15px;
     width: 75%;
 }
@@ -35,6 +32,9 @@ body {
 .client-internal {
     padding-left: 15px;
     width: 25%;
+    border-left-color: black;
+    border-left-style: solid;
+    border-left-width: 1px;
     /*position: absolute;*/
 }
 

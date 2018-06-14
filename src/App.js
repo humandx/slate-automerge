@@ -30,6 +30,7 @@ class App extends React.Component {
       this.state = {
         online: true,
         numClients: 1,
+        debuggingMode: false,
       }
     }
 
@@ -156,6 +157,10 @@ class App extends React.Component {
       }
     }
 
+    toggleDebugging = () => {
+      this.setState({debuggingMode: !this.state.debuggingMode})
+    }
+
     /********************
      * Render functions *
      ********************/
@@ -173,6 +178,7 @@ class App extends React.Component {
                   sendMessage={this.sendMessage}
                   online={this.state.online}
                   connectionHandler={this.connectionHandler}
+                  debuggingMode={this.state.debuggingMode}
               />
             </div>
           );
@@ -199,6 +205,9 @@ class App extends React.Component {
                 />
                 <button className="online-button" onClick={this.addClient}>Add client</button>
                 <button className="online-button" onClick={this.removeClient}>Remove client</button>
+              </div>
+              <div>
+                <button className="online-button" onClick={this.toggleDebugging}>Toggle debugging</button>
               </div>
             </div>
             <hr></hr>
