@@ -154,9 +154,8 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps) => {
     let pathString, slatePath
     let slateOp = []
 
-    // If the `pathString` is available, then we are likely inserting text
-    // FIXME: Verify this
     pathString = insertInto.match(/\d+/g)
+
     if (pathString) {
       slatePath = pathString.map(x => {
         return parseInt(x, 10);
@@ -188,44 +187,50 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps) => {
       }
 
     } else {
-      // FIXME: Is `op.index` always the right path? What happens in a
-      // sub-node?
       slatePath = [op.index]
 
       // 5/27/18: `insert_node` can't seem to insert a node with pre-existing
       // text, so we need to insert a node, then `insert_text` into that node
-
-      // Extract text from node to insert, then insert a "clean node", and
-      // re-insert text with `insert_text`
       const insertNode = objIdMap[op.value]
-      const insertTextNodes = insertNode.nodes
 
-      insertNode.nodes = [{
-        object: 'text',
-        characters: []
-      }]
+      if (insertNode.type === "paragraph") {
+        const insertTextNodes = insertNode.nodes
+        // Extract text from node to insert, then insert a "clean node", and
+        // re-insert text with `insert_text`
+        insertNode.nodes = [{
+          object: 'text',
+          characters: []
+        }]
 
-      slateOp.push({
-        type: 'insert_node',
-        path: slatePath,
-        node: insertNode
-      })
+        slateOp.push({
+          type: 'insert_node',
+          path: slatePath,
+          node: insertNode
+        })
 
-      // TODO: Convert the `Text` object properly into separate `insert_text`
-      // operations with proper marks
-      const nodeTextString = insertTextNodes.map(textNode => {
-        return textNode.characters.map(character => {
-          return character.text
-        }).join('')
-      })
-      slateOp.push({
-        type: 'insert_text',
-        // Insert the text in the first node of the newly created node
-        path: [slatePath[0], 0],
-        offset: 0,
-        text: nodeTextString.join(''),
-        marks: []
-      })
+        // TODO: Convert the `Text` object properly into separate `insert_text`
+        // operations with proper marks
+        const nodeTextString = insertTextNodes.map(textNode => {
+          return textNode.characters.map(character => {
+            return character.text
+          }).join('')
+        })
+        slateOp.push({
+          type: 'insert_text',
+          // Insert the text in the first node of the newly created node
+          path: [slatePath[0], 0],
+          offset: 0,
+          text: nodeTextString.join(''),
+          marks: []
+        })
+      } else {
+          const newNode = automergeJsonToSlate(insertNode);
+          slateOp.push({
+            type: "insert_node",
+            path: slatePath,
+            node: newNode,
+          })
+      }
     }
     slateOps[idx] = slateOp
   })
