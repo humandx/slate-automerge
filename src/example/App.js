@@ -21,14 +21,13 @@ class App extends React.Component {
     constructor(props) {
         super(props)
 
-        this.sendMessage = this.sendMessage.bind(this);
         this.clients = [];
+        this.connections = [];
         this.docSet = new Automerge.DocSet();
         this.docSet.setDoc(docId, doc);
-        this.connections = [];
+        this.sendMessage = this.sendMessage.bind(this);
 
         this.state = {
-            online: true,
             numClients: 1,
             debuggingMode: false,
         }
@@ -130,6 +129,10 @@ class App extends React.Component {
         }
     }
 
+    /**
+     * @function toggleDebugging
+     * @desc Toggle debugging tools
+     */
     toggleDebugging = () => {
         this.setState({ debuggingMode: !this.state.debuggingMode })
     }
@@ -144,14 +147,13 @@ class App extends React.Component {
             clientComponents.push(
                 <div className="client" key={`client-div-${i}`}>
                     <Client
-                        key={`client-${i}`}
                         clientId={i}
-                        docId={docId}
-                        ref={(client) => { this.clients[i] = client }}
-                        sendMessage={this.sendMessage}
-                        online={this.state.online}
                         connectionHandler={this.connectionHandler.bind(this)}
                         debuggingMode={this.state.debuggingMode}
+                        docId={docId}
+                        key={`client-${i}`}
+                        ref={(client) => { this.clients[i] = client }}
+                        sendMessage={this.sendMessage}
                     />
                 </div>
             );

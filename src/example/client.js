@@ -55,10 +55,9 @@ export class Client extends React.Component {
     constructor(props) {
         super(props)
 
-        this.onChange = this.onChange.bind(this)
-
         this.doc = Automerge.init();
         this.docSet = new Automerge.DocSet()
+        this.onChange = this.onChange.bind(this)
 
         this.connection = new Automerge.Connection(
             this.docSet,
@@ -74,7 +73,7 @@ export class Client extends React.Component {
 
         this.state = {
             value: initialSlateValue,
-            online: this.props.online,
+            online: true,
         }
     }
 
@@ -96,13 +95,28 @@ export class Client extends React.Component {
         this.props.connectionHandler(this.props.clientId, true)
     }
 
+    /**************************************
+     * UPDATE CLIENT FROM LOCAL OPERATION *
+     **************************************/
+    onChange = ({ operations, value }) => {
+        this.setState({ value: value })
+        const currentDoc = this.docSet.getDoc(this.props.docId)
+        if (currentDoc) {
+            const docNew = Automerge.change(currentDoc, `Client ${this.props.clientId}`, doc => {
+                // Use the Slate operations to modify the Automerge document.
+                applySlateOperations(doc, operations)
+            })
+            this.docSet.setDoc(this.props.docId, docNew);
+        }
+    }
+
     /***************************************
      * UPDATE CLIENT FROM REMOTE OPERATION *
      ***************************************/
     /**
      * @function updateWithRemoteChanges
      * @desc Update the Automerge document with changes from another client
-     * @param {Array} msg - A message created by Automerge.Connection
+     * @param {Object} msg - A message created by Automerge.Connection
      */
     updateWithRemoteChanges = (msg) => {
         console.debug(`Client ${this.props.clientId} received message:`)
@@ -139,6 +153,9 @@ export class Client extends React.Component {
         }
     }
 
+    /**********************************************
+     * Fail-safe for Automerge->Slate conversion  *
+     **********************************************/
     /**
      * @function updateSlateFromAutomerge
      * @desc Directly update the Slate Value from Automerge, ignoring Slate
@@ -178,29 +195,14 @@ export class Client extends React.Component {
             this.connection.open()
             let clock = this.docSet.getDoc(this.props.docId)._state.getIn(['opSet', 'clock']);
             this.props.sendMessage(this.props.clientId, {
-                docId: this.props.docId,
                 clock: clock,
+                docId: this.props.docId,
             })
         } else {
             this.connection.close()
             this.props.connectionHandler(this.props.clientId, false)
         }
         this.setState({ online: isOnline })
-    }
-
-    /**************************************
-     * UPDATE CLIENT FROM LOCAL OPERATION *
-     **************************************/
-    onChange = ({ operations, value }) => {
-        this.setState({ value: value })
-        const currentDoc = this.docSet.getDoc(this.props.docId)
-        if (currentDoc) {
-            const docNew = Automerge.change(currentDoc, `Client ${this.props.clientId}`, doc => {
-                // Use the Slate operations to modify the Automerge document.
-                applySlateOperations(doc, operations)
-            })
-            this.docSet.setDoc(this.props.docId, docNew);
-        }
     }
 
     /********************
@@ -285,10 +287,10 @@ export class Client extends React.Component {
                         <Editor
                             key={this.props.clientId}
                             ref={(e) => { this.editor = e }}
-                            value={this.state.value}
-                            onChange={this.onChange}
                             renderNode={renderNode}
+                            onChange={this.onChange}
                             plugins={plugins}
+                            value={this.state.value}
                         />
                     </td>
                     {this.props.debuggingMode && <td className="client-internal">
