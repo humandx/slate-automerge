@@ -34,28 +34,20 @@ const automergeOpCreate = (op, objIdMap) => {
  * @return {List} The corresponding Slate Operations for this operation
  */
 const automergeOpRemove = (op, objIdMap, previousDoc) => {
-    let pathString, slatePath, slateOp
-    pathString = op.path.slice(1).join("/")
+    let slatePath, slateOp
+    let pathString = op.path.slice(1).join("/")
     const lastObjectType = op.path[op.path.length-1];
-    if (pathString) {
-      pathString = pathString.match(/\d+/g)
-    } else {
-      return null;
-    }
-    if (pathString) {
-      slatePath = pathString.map(x => {
-        return parseInt(x, 10);
-      });
-    }
-    else {
-      // FIXME: Is `op.index` always the right path? What happens in a
-      // sub-node (in other words, will `slatePath` ever need to have
-      // length > 1?
-      slatePath = [op.index]
-    }
+    pathString = pathString.match(/\d+/g)
 
     switch (lastObjectType) {
       case 'characters':
+        // Insert a character
+        if (pathString) {
+          slatePath = pathString.map(x => { return parseInt(x, 10); });
+        } else {
+          slatePath = [op.index]
+        }
+
         slateOp = {
           type: 'remove_text',
           path: slatePath,
@@ -65,19 +57,21 @@ const automergeOpRemove = (op, objIdMap, previousDoc) => {
         }
         break;
       case 'nodes':
-        let removeNode = previousDoc;
-        op.path.forEach(path => {removeNode = removeNode[path]})
-        removeNode = removeNode[op.index]
-        if (removeNode.type !== "paragraph") {
+
+        if (pathString) {
+          slatePath = pathString.map(x => { return parseInt(x, 10); });
           slatePath = [...slatePath, op.index];
+        } else {
+          slatePath = [op.index]
         }
+
         slateOp = {
           type: 'remove_node',
           path: slatePath,
         }
         break;
       default:
-        console.error('`remove`, unsupported node type: ', removeNode.object)
+        console.error('`remove`, unsupported node type:', lastObjectType)
     }
     return [slateOp];
 }
@@ -154,84 +148,41 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps) => {
     let pathString, slatePath
     let slateOp = []
 
-    pathString = insertInto.match(/\d+/g)
-
-    if (pathString) {
+    if (insertInto === "nodes") {
+      // If inserting into the "root" of the tree, the slatePath is []
+      slatePath = []
+    } else {
+      pathString = insertInto.match(/\d+/g)
       slatePath = pathString.map(x => {
         return parseInt(x, 10);
       });
+    }
 
-      const nodeToAdd = objIdMap[op.value];
+    const nodeToAdd = objIdMap[op.value];
 
-      switch (nodeToAdd.object) {
-        case "character":
-          slateOp.push({
-            type: 'insert_text',
-            path: slatePath,
-            offset: op.index,
-            text: objIdMap[op.value].text,
-            marks: objIdMap[op.value].marks
-          })
-          break;
-        case "block":
-          const newNode = automergeJsonToSlate(nodeToAdd);
-          slatePath.push(op.index)
-          slateOp.push({
-            type: "insert_node",
-            path: slatePath,
-            node: newNode,
-          })
-          break;
-        default:
-          break;
-      }
-
-    } else {
-      slatePath = [op.index]
-
-      // 5/27/18: `insert_node` can't seem to insert a node with pre-existing
-      // text, so we need to insert a node, then `insert_text` into that node
-      const insertNode = objIdMap[op.value]
-
-      if (insertNode.type === "paragraph") {
-        const insertTextNodes = insertNode.nodes
-        // Extract text from node to insert, then insert a "clean node", and
-        // re-insert text with `insert_text`
-        insertNode.nodes = [{
-          object: 'text',
-          characters: []
-        }]
-
-        slateOp.push({
-          type: 'insert_node',
-          path: slatePath,
-          node: insertNode
-        })
-
-        // TODO: Convert the `Text` object properly into separate `insert_text`
-        // operations with proper marks
-        const nodeTextString = insertTextNodes.map(textNode => {
-          return textNode.characters.map(character => {
-            return character.text
-          }).join('')
-        })
+    switch (nodeToAdd.object) {
+      case "character":
         slateOp.push({
           type: 'insert_text',
-          // Insert the text in the first node of the newly created node
-          path: [slatePath[0], 0],
-          offset: 0,
-          text: nodeTextString.join(''),
-          marks: []
+          path: slatePath,
+          offset: op.index,
+          text: objIdMap[op.value].text,
+          marks: objIdMap[op.value].marks
         })
-      } else {
-          const newNode = automergeJsonToSlate(insertNode);
-          slateOp.push({
-            type: "insert_node",
-            path: slatePath,
-            node: newNode,
-          })
-      }
+        break;
+      case "block":
+        const newNode = automergeJsonToSlate(nodeToAdd);
+        slatePath.push(op.index)
+        slateOp.push({
+          type: "insert_node",
+          path: slatePath,
+          node: newNode,
+        })
+        break;
+      default:
+        break;
     }
+
     slateOps[idx] = slateOp
   })
   return slateOps
