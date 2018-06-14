@@ -56,38 +56,20 @@ class App extends React.Component {
      * Add/remove clients  *
      **************************************/
     /**
-     * @function updateNumClients
+     * @function updateNumClientsOnChangeHandler
      * @desc Update the number of clients
      * @param {Event} event - A Javascript Event
      */
-    updateNumClients = (event) => {
-        this.updateNumClientsHelper(event.target.value)
+    updateNumClientsOnChangeHandler = (event) => {
+        this.updateNumClients(event.target.value)
     }
 
     /**
-     * @function addClient
-     * @desc Add one client
-     * @param {Event} event - A Javascript Event
-     */
-    addClient = (event) => {
-        this.updateNumClientsHelper(this.state.numClients + 1)
-    }
-
-    /**
-     * @function removeClient
-     * @desc Remove one client
-     * @param {Event} event - A Javascript Event
-     */
-    removeClient = (event) => {
-        this.updateNumClientsHelper(this.state.numClients - 1)
-    }
-
-    /**
-     * @function updateNumClientsHelper
+     * @function updateNumClients
      * @desc Update the number of clients
      * @param {number} numClients - The number of clients
      */
-    updateNumClientsHelper = (numClients) => {
+    updateNumClients = (numClients) => {
         const updateNewClients = () => {
             this.clients = this.clients.slice(0, numClients);
         }
@@ -97,7 +79,6 @@ class App extends React.Component {
         } else {
             this.setState({ numClients: numClients }, updateNewClients);
         }
-
     }
 
     /**************************************
@@ -182,21 +163,41 @@ class App extends React.Component {
                 <div className="options">
                     <div className="options-text">Options:</div>
                     <div className="options-online">
-                        <button className="online-button" onClick={() => { this.toggleConnection(true) }}>All online</button>
-                        <button className="online-button" onClick={() => { this.toggleConnection(false) }}>All offline</button>
+                        <button
+                            className="online-button"
+                            onClick={() => { this.toggleConnection(true) }}
+                        >
+                            All online
+                        </button>
+                        <button
+                            className="online-button"
+                            onClick={() => { this.toggleConnection(false) }}
+                        >
+                            All offline
+                        </button>
                     </div>
                     <div>
                         <span>Number of clients: </span>
                         <input
                             type="number"
                             className="numclient-input"
-                            onChange={this.updateNumClients}
+                            onChange={this.updateNumClientsOnChangeHandler}
                             value={this.state.numClients}
                             min={1}
                             max={maxClients}
                         />
-                        <button className="online-button" onClick={this.addClient}>Add client</button>
-                        <button className="online-button" onClick={this.removeClient}>Remove client</button>
+                        <button
+                            className="online-button"
+                            onClick={() => { this.updateNumClients(this.state.numClients + 1) }}
+                        >
+                            Add client
+                        </button>
+                        <button
+                            className="online-button"
+                            onClick={() => { this.updateNumClients(this.state.numClients - 1) }}
+                        >
+                            Remove client
+                        </button>
                     </div>
                     <div>
                         <button className="online-button" onClick={this.toggleDebugging}>Toggle debugging</button>
