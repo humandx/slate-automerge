@@ -222,12 +222,7 @@ export class Client extends React.Component {
 
         const currentDoc = this.docSet.getDoc(this.props.docId)
         const docNew = Automerge.change(currentDoc, `Client ${this.props.clientId}`, doc => {
-          // Approach 1 which uses the difference between two Automerge documents
-          // to calculate the operations.
-          // applyImmutableDiffOperations(doc, differences)
-
-          // Approach 2 which directly uses the Slate operations to modify the
-          // Automerge document.
+          // Use the Slate operations to modify the Automerge document.
           applySlateOperations(doc, operations)
         })
 
