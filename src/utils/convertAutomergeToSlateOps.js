@@ -141,10 +141,9 @@ const automergeOpInsert = (op, objIdMap) => {
  * @param {Array} deferredOps - a list of deferred operations to process
  * @param {Object} objIdMap - Map from the objectId to created object
  * @param {Array} slateOps - List of created Slate operations
- * @param {Value} value - the Slate Value
  * @return {Array} List of list of Slate operations
  */
-const automergeOpInsertText = (deferredOps, objIdMap, slateOps, value) => {
+const automergeOpInsertText = (deferredOps, objIdMap, slateOps) => {
   // We know all ops in this list have the following conditions true:
   //  - op.action === `insert`
   //  - pathMap.hasOwnProperty(op.obj)
@@ -152,8 +151,8 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps, value) => {
   //    pathMap[op.obj] instanceof String
   deferredOps.forEach((op, idx) => {
     if (op === undefined || op === null) return;
-    const insertInto = op.path.slice(1).join("/")
 
+    const insertInto = op.path.slice(1).join("/")
     let pathString, slatePath
     let slateOp = []
 
@@ -274,7 +273,7 @@ export const convertAutomergeToSlateOps = (automergeOps, value) => {
   })
 
   if (containsDeferredOps) {
-    automergeOpInsertText(deferredOps, objIdMap, slateOps, value);
+    automergeOpInsertText(deferredOps, objIdMap, slateOps);
   }
   return flattenArray(slateOps);
 }
