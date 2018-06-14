@@ -36,12 +36,12 @@ const automergeOpCreate = (op, objIdMap) => {
 const automergeOpRemove = (op, objIdMap, previousDoc) => {
     let slatePath, slateOp
     let pathString = op.path.slice(1).join("/")
-    const lastObjectType = op.path[op.path.length-1];
+    const lastObjectPath = op.path[op.path.length-1];
     pathString = pathString.match(/\d+/g)
 
-    switch (lastObjectType) {
+    switch (lastObjectPath) {
       case 'characters':
-        // Insert a character
+        // Remove a character
         if (pathString) {
           slatePath = pathString.map(x => { return parseInt(x, 10); });
         } else {
@@ -57,7 +57,7 @@ const automergeOpRemove = (op, objIdMap, previousDoc) => {
         }
         break;
       case 'nodes':
-
+        // Remove a node
         if (pathString) {
           slatePath = pathString.map(x => { return parseInt(x, 10); });
           slatePath = [...slatePath, op.index];
@@ -71,7 +71,7 @@ const automergeOpRemove = (op, objIdMap, previousDoc) => {
         }
         break;
       default:
-        console.error('`remove`, unsupported node type:', lastObjectType)
+        console.error('`remove`, unsupported node type:', lastObjectPath)
     }
     return [slateOp];
 }
