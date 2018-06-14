@@ -81,7 +81,7 @@ const automergeOpRemove = (op, objIdMap, value) => {
       default:
         console.error('`remove`, unsupported node type: ', removeNode.object)
     }
-    return slateOp;
+    return [slateOp];
 }
 
 /**
@@ -255,7 +255,7 @@ export const convertAutomergeToSlateOps = (automergeOps, value) => {
         objIdMap = automergeOpCreate(op, objIdMap);
         break;
       case "remove":
-        slateOps[idx] = [automergeOpRemove(op, objIdMap, value)];
+        slateOps[idx] = automergeOpRemove(op, objIdMap, value);
         break;
       case "set":
         objIdMap = automergeOpSet(op, objIdMap);
