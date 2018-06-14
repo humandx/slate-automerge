@@ -64,7 +64,7 @@ class App extends React.Component {
       // Need the setTimeout to give time for each client to update it's own
       // Slate Value via setState
       setTimeout(() => {
-        console.log(`Server received message from Client ${clientId}`)
+        console.debug(`Server received message from Client ${clientId}`)
         this.connections[clientId].receiveMsg(message)
       })
     }

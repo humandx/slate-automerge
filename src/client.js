@@ -115,8 +115,8 @@ export class Client extends React.Component {
      * @param {Array} msg - A message created by Automerge.Connection
      */
     updateWithRemoteChanges = ( msg ) => {
-      console.log(`Client ${this.props.clientId} received message:`)
-      console.log(msg)
+      console.debug(`Client ${this.props.clientId} received message:`)
+      console.debug(msg)
       const currentDoc = this.docSet.getDoc(this.props.docId)
       const docNew = this.connection.receiveMsg(msg)
       const opSetDiff = Automerge.diff(currentDoc, docNew)
@@ -143,8 +143,8 @@ export class Client extends React.Component {
       } catch (e) {
         // If an error occurs, release the Slate Value based on the Automerge
         // document, which is the ground truth.
-        console.info("The following warning is fine:")
-        console.info(e)
+        console.debug("The following warning is fine:")
+        console.debug(e)
         this.updateSlateFromAutomerge()
       }
     }
