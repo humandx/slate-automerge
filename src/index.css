@@ -63,15 +63,14 @@ body {
     width: fit-content;
     display: block;
     margin: auto;
+    text-align: center;
 }
 
 .options-text {
-    text-align: center;
     font-weight: bolder;
 }
 
 .options-online {
-    text-align: center;
 }
 
 .online-button {
