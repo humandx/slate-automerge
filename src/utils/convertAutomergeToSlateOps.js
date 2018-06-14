@@ -123,7 +123,7 @@ const automergeOpInsert = (op, objIdMap, deferredOps) => {
       // Check if inserting into a newly created object or one that
       // already exists in our Automerge document
       if (objIdMap.hasOwnProperty(op.obj)) {
-        objIdMap[op.obj][op.index] = objIdMap[op.value]
+        objIdMap[op.obj].splice(op.index, 0, objIdMap[op.value])
       } else {
         deferredOps.push(op)
       }
@@ -254,7 +254,7 @@ export const convertAutomergeToSlateOps = (automergeOps, value) => {
   let objIdMap = {}
   let deferredOps = []
 
-  automergeOps.forEach(op => {
+  automergeOps.forEach((op, idx) => {
     switch (op.action) {
       case "create":
         objIdMap = automergeOpCreate(op, objIdMap);
