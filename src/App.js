@@ -177,7 +177,7 @@ class App extends React.Component {
                   ref={(client) => {this.clients[i] = client}}
                   sendMessage={this.sendMessage}
                   online={this.state.online}
-                  connectionHandler={this.connectionHandler}
+                  connectionHandler={this.connectionHandler.bind(this)}
                   debuggingMode={this.state.debuggingMode}
               />
             </div>
