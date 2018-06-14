@@ -2,7 +2,7 @@
  * The Slate client.
  */
 
-import { applyImmutableDiffOperations } from "./utils/immutableDiffToAutomerge"
+// import { applyImmutableDiffOperations } from "./utils/immutableDiffToAutomerge"
 import { applySlateOperations } from "./utils/slateOpsToAutomerge"
 import { convertAutomergeToSlateOps } from "./utils/convertAutomergeToSlateOps"
 import { Editor } from 'slate-react'
@@ -144,7 +144,8 @@ export class Client extends React.Component {
       } catch (e) {
         // If an error occurs, release the Slate Value based on the Automerge
         // document, which is the ground truth.
-        console.error(e)
+        console.debug("The following warning is fine:")
+        console.debug(e)
         this.updateSlateFromAutomerge()
       }
     }
@@ -314,21 +315,21 @@ export class Client extends React.Component {
         return (
             <div>
               {this.renderHeader()}
-              <table><tbody>
-              <td className="client-editor">
-                <Editor
-                    key={this.props.clientId}
-                    ref={(e) => {this.editor = e}}
-                    value={this.state.value}
-                    onChange={this.onChange}
-                    renderNode={renderNode}
-                    plugins={plugins}
-                />
-              </td>
-              <td className="client-internal">
-                {this.renderInternalClock()}
-              </td>
-              </tbody></table>
+              <table><tbody><tr>
+                <td className="client-editor">
+                  <Editor
+                      key={this.props.clientId}
+                      ref={(e) => {this.editor = e}}
+                      value={this.state.value}
+                      onChange={this.onChange}
+                      renderNode={renderNode}
+                      plugins={plugins}
+                  />
+                </td>
+                <td className="client-internal">
+                  {this.renderInternalClock()}
+                </td>
+              </tr></tbody></table>
             </div>
         )
     }

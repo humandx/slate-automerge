@@ -1,5 +1,4 @@
 import React from 'react'
-import Immutable from "immutable";
 import { Value } from 'slate'
 import slateCustomToJson from "./utils/slateCustomToJson"
 import Automerge from 'automerge'
@@ -13,7 +12,7 @@ const initialSlateValue = Value.fromJSON(initialValue);
 doc = Automerge.change(doc, 'Initialize Slate state', doc => {
   doc.note = slateCustomToJson(initialSlateValue.document);
 })
-const savedAutomergeDoc = Automerge.save(doc);
+// const savedAutomergeDoc = Automerge.save(doc);
 const maxClients = 6;
 
 
@@ -51,7 +50,7 @@ class App extends React.Component {
             // TODO: This is a quick hack since the line right below doesn't work.
             // this.clients[clientId].updateWithRemoteChanges(message);
             this.clients.forEach((client, idx) => {
-              if (clientId == idx) {
+              if (clientId === idx) {
                 client.updateWithRemoteChanges(message);
               }
             })
@@ -105,9 +104,6 @@ class App extends React.Component {
      * @param {number} numClients - The number of clients
      */
     updateNumClientsHelper = (numClients) => {
-      const numCurrentClients = this.state.numClients;
-      const hasNewClients = numClients > this.state.numClients;
-
       const updateNewClients = () => {
         this.clients = this.clients.slice(0, numClients);
         this.connections = this.connections.slice(0, numClients);
@@ -164,9 +160,6 @@ class App extends React.Component {
      * Render functions *
      ********************/
     render = () => {
-        let onlineText = this.state.online ? "CURRENTLY LIVE SYNCING" : "CURRENTLY OFFLINE";
-        let onlineTextClass = this.state.online ? "online-text green" : "online-text red";
-        let toggleButtonText = this.state.online ? "GO OFFLINE" : "GO ONLINE";
         let clientComponents = [];
 
         for (let i = 0; i < this.state.numClients; i++) {
