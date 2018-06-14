@@ -29,8 +29,8 @@ const fromJSON = (value) => {
 
     Object.keys(value).forEach((key) => {
         if (Array.isArray(value[key])) {
-            newJson[key] = value[key].map((node) => {return fromJSON(node)})
-        } else if (typeof(value[key]) === "object") {
+            newJson[key] = value[key].map((node) => { return fromJSON(node) })
+        } else if (typeof (value[key]) === "object") {
             newJson[key] = fromJSON(value[key])
         } else {
             newJson[key] = value[key]

@@ -1,0 +1,69 @@
+
+.client {
+    border: 1px;
+    border-style: solid;
+    border-radius: 5px;
+    border-color: black;
+    display: inline-block;
+    width: 45%;
+    margin: 0.5%;
+    padding: 1%;
+}
+
+.client-header {
+    width: 100%;
+}
+
+.client-table {
+    width: 100%;
+}
+
+.client-editor {
+    padding-right: 15px;
+    width: 75%;
+}
+
+.client-internal {
+    padding-left: 15px;
+    width: 25%;
+    border-left-color: black;
+    border-left-style: solid;
+    border-left-width: 1px;
+    /*position: absolute;*/
+}
+
+.table-cell-left {
+    border-right-color: black;
+    border-right-style: solid;
+    border-right-width: 1px;
+    padding-right: 5px;
+}
+
+.table-cell-right {
+
+}
+
+.table-cell-header {
+    border-bottom-color: black;
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+}
+
+
+.client-online-text {
+    padding: 10px;
+    margin: 5px;
+}
+
+.client-online-button {
+    float: right;
+    padding: 5px;
+}
+
+.green {
+    background-color: green;
+}
+
+.red {
+    background-color: red;
+}

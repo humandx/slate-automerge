@@ -1,0 +1,36 @@
+
+.online-text{
+    padding: 10px;
+    text-align: center;
+}
+
+.client {
+    border: 1px;
+    border-style: solid;
+    border-radius: 5px;
+    border-color: black;
+    display: inline-block;
+    width: 45%;
+    margin: 0.5%;
+    padding: 1%;
+}
+
+.options {
+    width: fit-content;
+    display: block;
+    margin: auto;
+    text-align: center;
+}
+
+.options-text {
+    font-weight: bolder;
+}
+
+.options-online {
+}
+
+.online-button {
+    display: inline-block;
+    padding: 10px;
+    margin: 5px;
+}
