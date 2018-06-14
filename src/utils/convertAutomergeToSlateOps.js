@@ -30,10 +30,10 @@ const automergeOpCreate = (op, objIdMap) => {
  * @desc Handles the `remove` Automerge operation
  * @param {Object} op - Automerge operation
  * @param {Object} objIdMap - Map from the objectId to created object
- * @param {Value} value - the Slate Value
+ * @param {Object} previousDoc - The previous Automerge document
  * @return {List} The corresponding Slate Operations for this operation
  */
-const automergeOpRemove = (op, objIdMap, value) => {
+const automergeOpRemove = (op, objIdMap, previousDoc) => {
     let pathString, slatePath, slateOp
     pathString = op.path.slice(1).join("/")
     const lastObjectType = op.path[op.path.length-1];
@@ -54,10 +54,6 @@ const automergeOpRemove = (op, objIdMap, value) => {
       slatePath = [op.index]
     }
 
-    // Validate the operation using the node type at path given by `op.obj`
-    // FIXME: Is the Slate's Value reliable enough to get the node type?
-    // Use the document to be changed
-    let removeNode = value.document.getNodeAtPath(slatePath)
     switch (lastObjectType) {
       case 'characters':
         slateOp = {
@@ -69,6 +65,9 @@ const automergeOpRemove = (op, objIdMap, value) => {
         }
         break;
       case 'nodes':
+        let removeNode = previousDoc;
+        op.path.forEach(path => {removeNode = removeNode[path]})
+        removeNode = removeNode[op.index]
         if (removeNode.type !== "paragraph") {
           slatePath = [...slatePath, op.index];
         }
@@ -237,10 +236,10 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps) => {
  * @function convertAutomergeToSlateOps
  * @desc Converts Automerge operations to Slate operations.
  * @param {Array} automergeOps - a list of Automerge operations created from Automerge.diff
- * @param {Value} value - the Slate Value
+ * @param {Object} previousDoc - The previous Automerge document
  * @return {Array} List of Slate operations
  */
-export const convertAutomergeToSlateOps = (automergeOps, value) => {
+export const convertAutomergeToSlateOps = (automergeOps, previousDoc) => {
   // To build objects from Automerge operations
   let slateOps = []
   let objIdMap = {}
@@ -253,7 +252,7 @@ export const convertAutomergeToSlateOps = (automergeOps, value) => {
         objIdMap = automergeOpCreate(op, objIdMap);
         break;
       case "remove":
-        slateOps[idx] = automergeOpRemove(op, objIdMap, value);
+        slateOps[idx] = automergeOpRemove(op, objIdMap, previousDoc);
         break;
       case "set":
         objIdMap = automergeOpSet(op, objIdMap);
