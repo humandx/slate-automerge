@@ -1,9 +1,9 @@
-import React from 'react'
-import { Value } from 'slate'
-import slateCustomToJson from "../libs/slateCustomToJson"
-import Automerge from 'automerge'
 import { Client } from "./client"
 import { initialValue } from "../utils/initialSlateValue"
+import { slateCustomToJson } from "../libs/slateAutomergeBridge"
+import { Value } from 'slate'
+import Automerge from 'automerge'
+import React from 'react'
 import './App.css';
 
 const docId = 1;
@@ -103,7 +103,6 @@ class App extends React.Component {
      */
     connectionHandler = (clientId, isOnline) => {
         if (isOnline) {
-
             if (this.connections[clientId] === undefined || this.connections[clientId] === null) {
                 let connection = new Automerge.Connection(
                     this.docSet,

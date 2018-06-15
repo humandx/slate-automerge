@@ -14,6 +14,7 @@
  */
 
 
+import Automerge from 'automerge'
 import slateCustomToJson from "./slateCustomToJson"
 
 const allowedOperations = [
@@ -24,10 +25,30 @@ const allowedOperations = [
 /**
  * @function applySlateOperations
  * @desc converts a Slate operation to operations that act on an Automerge document
+ * @param {Automerge.DocSet} doc - the Automerge document
+ * @param {number} doc - Automerge document id
+ * @param {List} slateOperations - a list of Slate Operations
+ * @param {number} clientId - (optional) Id of the client
+ */
+export const applySlateOperations = (docSet, docId, slateOperations, clientId) => {
+    const currentDoc = docSet.getDoc(docId)
+    if (currentDoc) {
+        const message = clientId ? `Client ${clientId}` : "Change log"
+        const docNew = Automerge.change(currentDoc, message, doc => {
+            // Use the Slate operations to modify the Automerge document.
+            applySlateOperationsHelper(doc, slateOperations)
+        })
+        docSet.setDoc(docId, docNew)
+    }
+}
+
+/**
+ * @function applySlateOperationsHelper
+ * @desc converts a Slate operation to operations that act on an Automerge document
  * @param {Automerge.document} doc - the Automerge document
  * @param {List} operations - a list of Slate Operations
  */
-export const applySlateOperations = (doc, operations) => {
+const applySlateOperationsHelper = (doc, operations) => {
     operations.forEach(op => {
         if (allowedOperations.indexOf(op.type) === -1) {
             return;
