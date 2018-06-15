@@ -1,11 +1,16 @@
 /**
  * This contains a custom toJSON function for Slate objects intended to copy
- * exactly the Slate value. The code was modified from the toJSON() methods in
+ * exactly the Slate value for Automerge with the exception of Text nodes.
+ * The code was modified from the toJSON() methods in
  * https://github.com/ianstormtaylor/slate/tree/master/packages/slate/src/models
- * This should not be needed once the PR related to
- * https://github.com/ianstormtaylor/slate/issues/1813 is completed.
+ *
+ * Primary differences:
+ * - For leaf nodes, text is changed from a string to an array of characters.
+     Should use Automerge.Text nodes if possible
+ * - Currently does not support marks.
  */
 
+import Automerge from 'automerge'
 
 /**
  * @function toJSON
@@ -28,12 +33,6 @@ const toJSON = (value, options = {}) => {
                 isVoid: value.isVoid,
                 nodes: value.nodes.toArray().map(n => toJSON(n, options)),
                 type: value.type,
-            }
-        case "character":
-            return {
-                object: value.object,
-                marks: value.marks.toArray().map(m => toJSON(m, options)),
-                text: value.text,
             }
         case "data":
             return object.toJSON();
@@ -58,10 +57,12 @@ const toJSON = (value, options = {}) => {
                 type: value.type,
             }
         case "leaf":
+            // Should convert leaf.text to an Automerge.Text object
+            const automergeText = value.text.split("")
             return {
                 object: value.object,
                 marks: value.marks.toArray().map(m => toJSON(m, options)),
-                text: value.text,
+                text: automergeText,
             }
         case "mark":
             return {
@@ -80,8 +81,7 @@ const toJSON = (value, options = {}) => {
                 focusOffset: value.focusOffset,
                 isBackward: value.isBackward,
                 isFocused: value.isFocused,
-                marks:
-                    value.marks === null ? null : value.marks.toArray().map(m => toJSON(m, options)),
+                marks: value.marks === null ? null : value.marks.toArray().map(m => toJSON(m, options)),
             }
         case "schema":
             return {
@@ -93,7 +93,7 @@ const toJSON = (value, options = {}) => {
         case "text":
             return {
                 object: value.object,
-                characters: value.characters.toArray().map(c => toJSON(c, options))
+                leaves: value.leaves.toArray().map(c => toJSON(c, options))
             }
         case "value":
             return valueJSON(value, options)

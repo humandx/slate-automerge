@@ -129,7 +129,7 @@ The "API" for the clients to call to send Automerge operations.
         ...
     }
 ```
-and 
+and
 ```
     componentDidMount = () => {
         this.connection.open()
@@ -181,7 +181,7 @@ This receives a message from the server regarding new remote changes and applies
         this.setState({ value: Value.fromJSON(newJson) })
     }
 ```
-This is the failure handler when the Automerge -> Slate conversion fails. 
+This is the failure handler when the Automerge -> Slate conversion fails.
 
 - When sending a change:
 ```
@@ -205,6 +205,7 @@ This converts the Slate operation to Automerge operations, applies it to the cli
 3) If a new client joins, do they have to initialize the entire Automerge document (with the history)? Or can they just start from the latest snapshot?
 4) What's a good way to batch changes from a client? To reduce network traffic, it would be nice to batch keystrokes within a second of each other together.
 5) How should we send over information (such as cursor location) which we don't want to persist?
+6) Currently does not include support for marks (especially with the Slate 0.34 update)
 
 ## Original README below
 

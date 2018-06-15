@@ -1,7 +1,7 @@
-import { applySlateOperations } from "./slateOpsToAutomerge"
-import { applyAutomergeOperations } from "./convertAutomergeToSlateOps"
+import { applySlateOperations } from "./applySlateOperations"
+import { applyAutomergeOperations } from "./applyAutomergeOperations"
 import slateCustomToJson from "./slateCustomToJson"
-import automergeJsonToSlate from "../libs/automergeJsonToSlate"
+import automergeJsonToSlate from "./automergeJsonToSlate"
 
 export {
     applySlateOperations, applyAutomergeOperations, automergeJsonToSlate, slateCustomToJson

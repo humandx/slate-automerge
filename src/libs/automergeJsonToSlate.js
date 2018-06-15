@@ -1,23 +1,15 @@
 /**
  * This contains a custom fromJSON function for Automerge objects intended to
- * initialize as a Slate Value.
- * This will not be needed once the PR related to
- * https://github.com/ianstormtaylor/slate/issues/1813 is completed.
+ * initialize as a Slate Value. This currently does not have support for marks.
  */
 
-const getLeaves = (characterList) => {
-    let leaves = [];
-    let text = ""
-    characterList.forEach((character) => {
-        text = text.concat(character.text)
-    })
-    let leaf = {
+const createLeaf = (leaf) => {
+    let newLeaf = {
         object: "leaf",
         marks: [],
-        text: text
+        text: leaf.text.join("")
     }
-    leaves.push(leaf)
-    return leaves
+    return newLeaf
 }
 
 const fromJSON = (value) => {
@@ -38,7 +30,7 @@ const fromJSON = (value) => {
     })
 
     if (value.object === "text") {
-        newJson.leaves = getLeaves(value.characters)
+        newJson.leaves = value.leaves.map(leaf => createLeaf(leaf))
     }
 
     return newJson;

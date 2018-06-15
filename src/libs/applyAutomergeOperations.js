@@ -23,8 +23,8 @@ export const applyAutomergeOperations = (opSetDiff, change, failureCallback) => 
     } catch (e) {
         // If an error occurs, release the Slate Value based on the Automerge
         // document, which is the ground truth.
-        console.debug("The following warning is fine:")
-        console.debug(e)
+        console.info("The following warning is fine:")
+        console.info(e)
         if (failureCallback) {
             failureCallback();
         }
@@ -35,7 +35,7 @@ export const applyAutomergeOperations = (opSetDiff, change, failureCallback) => 
  * @function convertAutomergeToSlateOps
  * @desc Converts Automerge operations to Slate operations.
  * @param {Array} automergeOps - a list of Automerge operations created from Automerge.diff
- * @return {Array} List of Slate operations
+ * @return {Array} Array of Slate operations
  */
 export const convertAutomergeToSlateOps = (automergeOps) => {
     // To build objects from Automerge operations
@@ -53,9 +53,7 @@ export const convertAutomergeToSlateOps = (automergeOps) => {
             case "remove":
                 temp = automergeOpRemove(op, objIdMap);
                 objIdMap = temp.objIdMap;
-                if (temp.slateOp) {
-                    slateOps[idx] = [temp.slateOp]
-                }
+                slateOps[idx] = temp.slateOps
                 break;
             case "set":
                 objIdMap = automergeOpSet(op, objIdMap);
@@ -64,6 +62,7 @@ export const convertAutomergeToSlateOps = (automergeOps) => {
                 temp = automergeOpInsert(op, objIdMap);
                 objIdMap = temp.objIdMap;
                 deferredOps[idx] = temp.deferredOps;
+                slateOps[idx] = temp.slateOps;
                 if (temp.deferredOps && !containsDeferredOps) {
                     containsDeferredOps = true;
                 }
@@ -107,10 +106,11 @@ const automergeOpCreate = (op, objIdMap) => {
  * @desc Handles the `remove` Automerge operation
  * @param {Object} op - Automerge operation
  * @param {Object} objIdMap - Map from the objectId to created object
- * @return {Object} The objIdMap and corresponding Slate Operations for this operation
+ * @return {Object} The objIdMap and array of corresponding Slate Operations for
+ *     this operation
  */
 const automergeOpRemove = (op, objIdMap) => {
-    let slatePath, slateOp
+    let nodePath, slateOps
     let pathString = op.path.slice(1).join("/")
     const lastObjectPath = op.path[op.path.length - 1];
     pathString = pathString.match(/\d+/g)
@@ -119,41 +119,38 @@ const automergeOpRemove = (op, objIdMap) => {
         objIdMap[op.obj].splice(op.index, 1)
     } else {
         switch (lastObjectPath) {
-            case 'characters':
+            case 'text':
                 // Remove a character
-                if (pathString) {
-                    slatePath = pathString.map(x => { return parseInt(x, 10); });
-                } else {
-                    slatePath = [op.index]
-                }
+                nodePath = pathString.map(x => { return parseInt(x, 10); })
+                nodePath = nodePath.splice(0, nodePath.length - 1)
 
-                slateOp = {
+                slateOps = [{
                     type: 'remove_text',
-                    path: slatePath,
+                    path: nodePath,
                     offset: op.index,
                     text: '*',
                     marks: []
-                }
+                }]
                 break;
             case 'nodes':
                 // Remove a node
                 if (pathString) {
-                    slatePath = pathString.map(x => { return parseInt(x, 10); });
-                    slatePath = [...slatePath, op.index];
+                    nodePath = pathString.map(x => { return parseInt(x, 10); });
+                    nodePath = [...nodePath, op.index];
                 } else {
-                    slatePath = [op.index]
+                    nodePath = [op.index]
                 }
 
-                slateOp = {
+                slateOps = [{
                     type: 'remove_node',
-                    path: slatePath,
-                }
+                    path: nodePath,
+                }]
                 break;
             default:
                 console.error('`remove`, unsupported node type:', lastObjectPath)
         }
     }
-    return { objIdMap: objIdMap, slateOp: slateOp };
+    return { objIdMap: objIdMap, slateOps: slateOps };
 }
 
 
@@ -189,12 +186,13 @@ const automergeOpSet = (op, objIdMap) => {
  * @desc Handles the `insert` Automerge operation
  * @param {Object} op - Automerge operation
  * @param {Object} objIdMap - Map from the objectId to created object
- * @return {Object} Containing the map from Object Id to Object and deferred operation
+ * @return {Object} Containing the map from Object Id to Object,
+ *     deferred operation, and array of Slate operations.
  */
 const automergeOpInsert = (op, objIdMap) => {
     if (op.link) {
         // Check if inserting into a newly created object or one that
-        // already exists in our Automerge document
+        // already exists in our Automerge document.
         if (objIdMap.hasOwnProperty(op.obj)) {
             objIdMap[op.obj].splice(op.index, 0, objIdMap[op.value])
         } else {
@@ -202,10 +200,30 @@ const automergeOpInsert = (op, objIdMap) => {
         }
     }
     else {
-        // TODO: Does this ever happen?
-        console.log('op.action is `insert`, but link is false')
+        // If adding in a primitive to a list, then op.link is False.
+        // This is used when adding in a character to the text field of a Leaf
+        // node.
+        if (objIdMap.hasOwnProperty(op.obj)) {
+            objIdMap[op.obj].splice(op.index, 0, op.value)
+        } else {
+            let pathString = op.path.slice(1).join("/")
+            pathString = pathString.match(/\d+/g)
+            let nodePath = pathString.map(x => {
+                return parseInt(x, 10);
+            });
+            nodePath = nodePath.splice(0, nodePath.length - 1)
+
+            const slateOp = {
+                type: 'insert_text',
+                path: nodePath,
+                offset: op.index,
+                text: op.value,
+                marks: []
+            }
+            return { objIdMap: objIdMap, deferredOps: null, slateOps: [slateOp] }
+        }
     }
-    return { objIdMap: objIdMap, deferredOps: null };
+    return { objIdMap: objIdMap }
 }
 
 /**
@@ -226,15 +244,15 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps) => {
         if (op === undefined || op === null) return;
 
         const insertInto = op.path.slice(1).join("/")
-        let pathString, slatePath
+        let pathString, nodePath
         let slateOp = []
 
         if (insertInto === "nodes") {
-            // If inserting into the "root" of the tree, the slatePath is []
-            slatePath = []
+            // If inserting into the "root" of the tree, the nodePath is []
+            nodePath = []
         } else {
             pathString = insertInto.match(/\d+/g)
-            slatePath = pathString.map(x => {
+            nodePath = pathString.map(x => {
                 return parseInt(x, 10);
             });
         }
@@ -245,7 +263,7 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps) => {
             case "character":
                 slateOp.push({
                     type: 'insert_text',
-                    path: slatePath,
+                    path: nodePath,
                     offset: op.index,
                     text: objIdMap[op.value].text,
                     marks: objIdMap[op.value].marks
@@ -253,10 +271,10 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps) => {
                 break;
             case "block":
                 const newNode = automergeJsonToSlate(nodeToAdd);
-                slatePath.push(op.index)
+                nodePath.push(op.index)
                 slateOp.push({
                     type: "insert_node",
-                    path: slatePath,
+                    path: nodePath,
                     node: newNode,
                 })
                 break;
@@ -278,7 +296,7 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps) => {
 const flattenArray = (array_of_lists) => {
     let newList = []
     array_of_lists.forEach((items) => {
-        if (items !== null) {
+        if (items !== null && items !== undefined) {
             items.forEach((item) => { newList.push(item) })
         }
     });
