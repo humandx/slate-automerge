@@ -21,16 +21,16 @@ At the "server" level, you can turn all clients on/off and view debugging inform
 
 ## How it works
 
-We keep two copies of the document: one in Slate's Immutable data structure (Slate Value) and one in Automerge's data structure (immutable JSON). Aside from the embedded functions in Slate's data structure, the structure and hierarchy of the two should be identical at all times.
+We keep two copies of the document: one in Slate's Immutable data structure (Slate Value) and one in Automerge's data structure (immutable JSON). Aside from the embedded functions in Slate's data structure, the structure and hierarchy of the two should be identical at all times. Automerge handles all communication to ensure that the clients are all in-sync when possible via `Automerge.Connection` and in a sense is the "backend". Ultimately, the Automerge document is considered the ground truth and whenever an error occurs, we reload the Slate editor using the Automerge document JSON.
 
 Flow of when a change is made on Client A and broadcast to Client B:
 1) Change is made to Client A.
-2) The onChange function in Client A is fired.
+2) The onChange function in Client A is fired in `onChange`.
 * The Slate Value is stored on the client.
 * The Slate Operations are transformed to Automerge JSON operations (in applySlateOperations) and applied to the Automerge document.
 * If online, the Automerge changes (calculated by `Automerge.getChanges`) is broadcast to all other clients via `Automerge.Connection`. If offline, when the client comes back online, it syncs all changes also via `Automerge.Connection`.
 
-3) Client B receives an event with the changes.
+3) Client B receives an event with the changes in `updateWithRemoteChanges`.
 * Client B's Automerge document applies the changes from Client A.
 * The differences between the Client B's new and old Automerge documents are computed (using Automerge.diff).
 * The differences are converted to Slate Operations (in `convertAutomergeToSlateOps`) and applied to Client B's Slate Value.
