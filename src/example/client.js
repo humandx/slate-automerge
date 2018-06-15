@@ -3,13 +3,13 @@
  */
 
 import { applyAutomergeOperations, applySlateOperations, automergeJsonToSlate } from "../libs/slateAutomergeBridge"
-import { Editor } from 'slate-react'
-import { Value } from 'slate'
-import Automerge from 'automerge'
-import EditList from 'slate-edit-list'
+import { Editor } from "slate-react"
+import { Value } from "slate"
+import Automerge from "automerge"
+import EditList from "slate-edit-list"
 import Immutable from "immutable";
-import React from 'react'
-import './client.css';
+import React from "react"
+import "./client.css";
 
 
 const plugin = EditList();
@@ -22,25 +22,25 @@ function renderNode(props) {
         .contains(node);
 
     switch (node.type) {
-        case 'ul_list':
+        case "ul_list":
             return <ul {...attributes}>{children}</ul>;
-        case 'ol_list':
+        case "ol_list":
             return <ol {...attributes}>{children}</ol>;
 
-        case 'list_item':
+        case "list_item":
             return (
                 <li
-                    className={isCurrentItem ? 'current-item' : ''}
-                    title={isCurrentItem ? 'Current Item' : ''}
+                    className={isCurrentItem ? "current-item" : ""}
+                    title={isCurrentItem ? "Current Item" : ""}
                     {...props.attributes}
                 >
                     {props.children}
                 </li>
             );
 
-        case 'paragraph':
+        case "paragraph":
             return <div {...attributes}>{children}</div>;
-        case 'heading':
+        case "heading":
             return <h1 {...attributes}>{children}</h1>;
         default:
             return <div {...attributes}>{children}</div>;
@@ -164,7 +164,7 @@ export class Client extends React.Component {
         if (isOnline) {
             this.props.connectionHandler(this.props.clientId, true)
             this.connection.open()
-            let clock = this.docSet.getDoc(this.props.docId)._state.getIn(['opSet', 'clock']);
+            let clock = this.docSet.getDoc(this.props.docId)._state.getIn(["opSet", "clock"]);
             this.props.sendMessage(this.props.clientId, {
                 clock: clock,
                 docId: this.props.docId,
@@ -217,7 +217,7 @@ export class Client extends React.Component {
      */
     renderInternalClock = () => {
         try {
-            let clockList = this.docSet.getDoc(this.props.docId)._state.getIn(['opSet', 'clock']);
+            let clockList = this.docSet.getDoc(this.props.docId)._state.getIn(["opSet", "clock"]);
             let clockComponents = [];
             clockList.forEach((value, actorId) => {
                 actorId = actorId.substr(0, actorId.indexOf("-"))
