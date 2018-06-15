@@ -1,7 +1,10 @@
 {
   "name": "slate-automerge",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.2.0",
+  "description": "Slate-Automerge bridge for building collaborative editors using CRDT",
+  "main": "dist/slateAutomergeBridge.js",
+  "author": "humandx",
+  "license": "MIT",
   "dependencies": {
     "automerge": "0.7.10",
     "immutable": "3.8.2",
@@ -13,9 +16,16 @@
     "slate-react": "0.12.4",
     "slate-edit-list": "0.11.3"
   },
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-loader": "^7.1.4",
+    "babel-preset-env": "^1.7.0",
+    "webpack": "^3.11.0"
+  },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "webpack",
+    "prepublishOnly": "./node_modules/.bin/webpack",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
   }
