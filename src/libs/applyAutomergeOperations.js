@@ -89,14 +89,14 @@ export const convertAutomergeToSlateOps = (automergeOps) => {
  */
 const automergeOpCreate = (op, objIdMap) => {
     switch (op.type) {
-        case 'map':
+        case "map":
             objIdMap[op.obj] = {}
             break;
-        case 'list':
+        case "list":
             objIdMap[op.obj] = []
             break;
         default:
-            console.error('`create`, unsupported type: ', op.type)
+            console.error("`create`, unsupported type: ", op.type)
     }
     return objIdMap;
 }
@@ -119,20 +119,20 @@ const automergeOpRemove = (op, objIdMap) => {
         objIdMap[op.obj].splice(op.index, 1)
     } else {
         switch (lastObjectPath) {
-            case 'text':
+            case "text":
                 // Remove a character
                 nodePath = pathString.map(x => { return parseInt(x, 10); })
                 nodePath = nodePath.splice(0, nodePath.length - 1)
 
                 slateOps = [{
-                    type: 'remove_text',
+                    type: "remove_text",
                     path: nodePath,
                     offset: op.index,
-                    text: '*',
+                    text: "*",
                     marks: []
                 }]
                 break;
-            case 'nodes':
+            case "nodes":
                 // Remove a node
                 if (pathString) {
                     nodePath = pathString.map(x => { return parseInt(x, 10); });
@@ -142,12 +142,12 @@ const automergeOpRemove = (op, objIdMap) => {
                 }
 
                 slateOps = [{
-                    type: 'remove_node',
+                    type: "remove_node",
                     path: nodePath,
                 }]
                 break;
             default:
-                console.error('`remove`, unsupported node type:', lastObjectPath)
+                console.error("`remove`, unsupported node type:", lastObjectPath)
         }
     }
     return { objIdMap: objIdMap, slateOps: slateOps };
@@ -162,7 +162,7 @@ const automergeOpRemove = (op, objIdMap) => {
  * @return {Object} Map from Object Id to Object
  */
 const automergeOpSet = (op, objIdMap) => {
-    if (op.hasOwnProperty('link')) {
+    if (op.hasOwnProperty("link")) {
         // What's the point of the `link` field? All my experiments
         // have `link` = true
         if (op.link) {
@@ -172,7 +172,7 @@ const automergeOpSet = (op, objIdMap) => {
                 objIdMap[op.obj][op.key] = objIdMap[op.value]
             } else {
                 // TODO: Does this ever happen?
-                console.error('`set`, unable to find objectId: ', op.value)
+                console.error("`set`, unable to find objectId: ", op.value)
             }
         }
     } else {
@@ -214,7 +214,7 @@ const automergeOpInsert = (op, objIdMap) => {
             nodePath = nodePath.splice(0, nodePath.length - 1)
 
             const slateOp = {
-                type: 'insert_text',
+                type: "insert_text",
                 path: nodePath,
                 offset: op.index,
                 text: op.value,
@@ -238,7 +238,7 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps) => {
     // We know all ops in this list have the following conditions true:
     //  - op.action === `insert`
     //  - pathMap.hasOwnProperty(op.obj)
-    //  - typeof pathMap[op.obj] === 'string' ||
+    //  - typeof pathMap[op.obj] === "string" ||
     //    pathMap[op.obj] instanceof String
     deferredOps.forEach((op, idx) => {
         if (op === undefined || op === null) return;
@@ -262,7 +262,7 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps) => {
         switch (nodeToAdd.object) {
             case "character":
                 slateOp.push({
-                    type: 'insert_text',
+                    type: "insert_text",
                     path: nodePath,
                     offset: op.index,
                     text: objIdMap[op.value].text,

@@ -10,7 +10,7 @@
  * - Currently does not support marks.
  */
 
-import Automerge from 'automerge'
+import Automerge from "automerge"
 
 /**
  * @function toJSON

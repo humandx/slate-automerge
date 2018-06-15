@@ -1,15 +1,15 @@
 import { Client } from "./client"
 import { initialValue } from "../utils/initialSlateValue"
 import { slateCustomToJson } from "../libs/slateAutomergeBridge"
-import { Value } from 'slate'
-import Automerge from 'automerge'
-import React from 'react'
-import './App.css';
+import { Value } from "slate"
+import Automerge from "automerge"
+import React from "react"
+import "./App.css";
 
 const docId = 1;
 let doc = Automerge.init();
 const initialSlateValue = Value.fromJSON(initialValue);
-doc = Automerge.change(doc, 'Initialize Slate state', doc => {
+doc = Automerge.change(doc, "Initialize Slate state", doc => {
     doc.note = slateCustomToJson(initialSlateValue.document);
 })
 // const savedAutomergeDoc = Automerge.save(doc);

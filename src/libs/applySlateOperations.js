@@ -14,7 +14,7 @@
  */
 
 
-import Automerge from 'automerge'
+import Automerge from "automerge"
 import slateCustomToJson from "./slateCustomToJson"
 
 const allowedOperations = [
