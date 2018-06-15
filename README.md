@@ -42,7 +42,7 @@ Flow of when a change is made on Client A and broadcast to Client B:
 
 ## How to use at the code level:
 
-On the server:
+### On the server:
 - To initialize the Automerge document and Connection:
 ```
     constructor(props) {
@@ -113,7 +113,7 @@ When a client connects, this creates the `Automerge.Connection` for that client 
 ```
 The "API" for the clients to call to send Automerge operations.
 
-Client:
+### On the client:
 - To initialize the Automerge document and Connection:
 ```
     constructor(props) {
