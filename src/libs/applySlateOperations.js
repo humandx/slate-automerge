@@ -42,6 +42,16 @@ export const applySlateOperations = (docSet, docId, slateOperations, clientId) =
     }
 }
 
+
+const assertPath = (docRoot, path) => {
+    let currentNode = docRoot;
+    path.forEach(el => {
+        currentNode = currentNode.nodes[el];
+    })
+    return currentNode;
+}
+
+
 /**
  * @function applySlateOperationsHelper
  * @desc converts a Slate operation to operations that act on an Automerge document
@@ -59,7 +69,7 @@ const applySlateOperationsHelper = (doc, operations) => {
         } = op;
         const index = path[path.length - 1];
         const rest = path.slice(0, -1)
-        let currentNode = doc.note;
+        let currentNode;
         switch (op.type) {
             // NOTE: Marks are definitely broken as of Slate 0.34
             // case "add_mark":
@@ -111,23 +121,17 @@ const applySlateOperationsHelper = (doc, operations) => {
             //     })
             //     break;
             case "insert_text":
-                path.forEach(el => {
-                    currentNode = currentNode.nodes[el];
-                })
+                currentNode = assertPath(doc.note, path);
                 // Assumes no marks and only 1 leaf
                 currentNode.leaves[0].text.insertAt(offset, text);
                 break;
             case "remove_text":
-                path.forEach(el => {
-                    currentNode = currentNode.nodes[el];
-                })
+                currentNode = assertPath(doc.note, path);
                 // Assumes no marks and only 1 leaf
                 currentNode.leaves[0].text.deleteAt(offset, text.length);
                 break;
             case "split_node":
-                rest.forEach(el => {
-                    currentNode = currentNode.nodes[el];
-                })
+                currentNode = assertPath(doc.note, rest);
                 let childOne = currentNode.nodes[index];
                 let childTwo = JSON.parse(JSON.stringify(currentNode.nodes[index]));
                 if (childOne.object === "text") {
@@ -150,9 +154,7 @@ const applySlateOperationsHelper = (doc, operations) => {
                 }
                 break;
             case "merge_node":
-                rest.forEach(el => {
-                    currentNode = currentNode.nodes[el];
-                })
+                currentNode = assertPath(doc.note, rest);
                 let one = currentNode.nodes[index - 1];
                 let two = currentNode.nodes[index];
                 if (one.object === "text") {
@@ -174,21 +176,15 @@ const applySlateOperationsHelper = (doc, operations) => {
                 currentNode.nodes.deleteAt(index, 1);
                 break;
             case "insert_node":
-                rest.forEach(el => {
-                    currentNode = currentNode.nodes[el];
-                })
+                currentNode = assertPath(doc.note, rest);
                 currentNode.nodes.insertAt(index, slateCustomToJson(node));
                 break;
             case "remove_node":
-                rest.forEach(el => {
-                    currentNode = currentNode.nodes[el];
-                })
+                currentNode = assertPath(doc.note, rest);
                 currentNode.nodes.deleteAt(index, 1);
                 break;
             case "set_node":
-                path.forEach(el => {
-                    currentNode = currentNode.nodes[el];
-                })
+                currentNode = assertPath(doc.note, path);
                 for (let attrname in properties) {
                     currentNode[attrname] = properties[attrname];
                 }
@@ -200,9 +196,7 @@ const applySlateOperationsHelper = (doc, operations) => {
                 const oldIndex = path[path.length - 1]
 
                 // Remove the old node from it's current parent.
-                oldParentPath.forEach(el => {
-                    currentNode = currentNode.nodes[el];
-                })
+                currentNode = assertPath(doc.note, oldParentPath);
                 let nodeToMove = currentNode.nodes[oldIndex];
 
                 // Find the new target...
