@@ -260,7 +260,8 @@ const automergeOpInsertText = (deferredOps, objIdMap, slateOps) => {
         const nodeToAdd = objIdMap[op.value];
 
         switch (nodeToAdd.object) {
-            case "character":
+            case "text":
+                // As of Slate 0.34, we don't enter this case any longer.
                 slateOp.push({
                     type: "insert_text",
                     path: nodePath,
