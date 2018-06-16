@@ -272,6 +272,7 @@ This converts the Slate operation to Automerge operations, applies it to the cli
 3) If a new client joins, do they have to initialize the entire Automerge document (with the history)? Or can they just start from the latest snapshot?
 4) What's a good way to batch changes from a client? To reduce network traffic, it would be nice to batch keystrokes within a second of each other together.
 5) How should we send over information (such as cursor location) which we don't want to persist?
+6) As soon as the [ImmutableAPI](https://github.com/automerge/automerge/issues/47) for Automerge is complete, the `applySlateOperations` file should be updated. The ImmutableAPI may make this bridge much cleaner.
 
 ## Original README below
 
