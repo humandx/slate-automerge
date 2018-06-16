@@ -18,7 +18,7 @@ import Automerge from "automerge"
 import slateCustomToJson from "./slateCustomToJson"
 
 const allowedOperations = [
-    "insert_text", "remove_text", "insert_node", "split_node",
+    "add_mark", "insert_text", "remove_text", "insert_node", "split_node",
     "remove_node", "merge_node", "set_node", "move_node"
 ];
 
@@ -43,15 +43,6 @@ export const applySlateOperations = (docSet, docId, slateOperations, clientId) =
 }
 
 
-const assertPath = (docRoot, path) => {
-    let currentNode = docRoot;
-    path.forEach(el => {
-        currentNode = currentNode.nodes[el];
-    })
-    return currentNode;
-}
-
-
 /**
  * @function applySlateOperationsHelper
  * @desc converts a Slate operation to operations that act on an Automerge document
@@ -71,55 +62,19 @@ const applySlateOperationsHelper = (doc, operations) => {
         const rest = path.slice(0, -1)
         let currentNode;
         switch (op.type) {
-            // NOTE: Marks are definitely broken as of Slate 0.34
-            // case "add_mark":
-            //     // Untested
-            //     path.forEach(el => {
-            //         currentNode = currentNode.nodes[el];
-            //     })
-            //     currentNode.characters.forEach((char, i) => {
-            //         if (i < offset) return;
-            //         if (i >= offset + length) return;
-            //         const hasMark = char.marks.find((charMark) => {
-            //             return charMark.type === mark.type
-            //         })
-            //         if (!hasMark) {
-            //             char.marks.push(mark)
-            //         }
-            //     })
-            //     break;
-            // case "remove_mark":
-            //     // Untested
-            //     path.forEach(el => {
-            //         currentNode = currentNode.nodes[el];
-            //     })
-            //     currentNode.characters.forEach((char, i) => {
-            //         if (i < offset) return;
-            //         if (i >= offset + length) return;
-            //         const markIndex = char.marks.findIndex((charMark) => {
-            //             return charMark.type === mark.type
-            //         })
-            //         if (markIndex) {
-            //             char.marks.deleteAt(markIndex, 1);
-            //         }
-            //     })
-            //     break;
-            // case "set_mark":
-            //     // Untested
-            //     path.forEach(el => {
-            //         currentNode = currentNode.nodes[el];
-            //     })
-            //     currentNode.characters.forEach((char, i) => {
-            //         if (i < offset) return;
-            //         if (i >= offset + length) return;
-            //         const markIndex = char.marks.findIndex((charMark) => {
-            //             return charMark.type === mark.type
-            //         })
-            //         if (markIndex) {
-            //             char.marks[markIndex] = mark;
-            //         }
-            //     })
-            //     break;
+            case "add_mark":
+                // Untested
+                currentNode = assertPath(doc.note, path);
+                addMark(currentNode, offset, length, mark)
+                break;
+            case "remove_mark":
+                currentNode = assertPath(doc.note, path);
+                removeMark(currentNode, offset, length, mark)
+                break;
+            case "set_mark":
+                currentNode = assertPath(doc.note, path);
+                setMark(currentNode, offset, length, mark)
+                break;
             case "insert_text":
                 currentNode = assertPath(doc.note, path);
                 // Assumes no marks and only 1 leaf
@@ -244,7 +199,6 @@ const applySlateOperationsHelper = (doc, operations) => {
                     nodeToMove = JSON.parse(JSON.stringify(nodeToMove));
                     // Insert the new node to its new parent.
                     currentNode.nodes.insertAt(newIndex, nodeToMove);
-
                 }
                 break;
             default:
@@ -252,4 +206,90 @@ const applySlateOperationsHelper = (doc, operations) => {
                 break;
         }
     })
+}
+
+const assertPath = (docRoot, path) => {
+    let currentNode = docRoot;
+    path.forEach(el => { currentNode = currentNode.nodes[el]; })
+    return currentNode;
+}
+
+const addMark = (currentNode, index, length, set) => {
+    if (this.text === '') return
+    if (length === 0) return
+    let numberOfChars = 0
+    currentNode.leaves.forEach(leaf => {numberOfChars += leaf.text.length})
+    if (index >= numberOfChars) return
+
+    const [before, bundle] = splitLeaves(currentNode.leaves, index)
+    const [middle, after] = splitLeaves(bundle, length)
+
+    set = set.toJS()
+    const leaves = before.concat(middle.map(x => addMarksToLeaf(x, set)), after)
+    return setLeaves(currentNode, leaves)
+}
+
+const removeMark = (currentNode, index, length, set) => {
+
+}
+
+const setMark = (currentNode, index, length, mark, properties) => {
+
+}
+
+const splitLeaves = (leaves, offset) => {
+    if (offset < 0) { return [[], leaves] }
+    if (leaves.length === 0) { return [[], []] }
+    let endOffset = 0
+    let index = -1
+    let left, right
+
+    for (let leaf of leaves) {
+        index++
+        const startOffset = endOffset
+        const { text } = leaf
+        endOffset += text.length
+
+        if (endOffset < offset) break
+        if (startOffset > offset) continue
+
+        const length = offset - startOffset
+
+        left = leaf
+        right = JSON.parse(JSON.stringify(leaf))
+
+        left.text = left.text.slice(0, length)
+        right.text = right.text.slice(length)
+        break
+    }
+
+    if (!left) return [leaves, []]
+    if (left.text.length === 0) {
+        if (index === 0) {
+            return [[left], [right]]
+        }
+        return [leaves.slice(0, index), leaves.slice(index)]
+    }
+    if (right.text.length === 0) {
+        if (index === leaves.length - 1) {
+            return [[left], [right]]
+        }
+        return [leaves.slice(0, index + 1), leaves.slice(index + 1)]
+    }
+    return [[left], [right]]
+}
+
+const addMarksToLeaf = (leaf, mark) => {
+    if (leaf.marks.indexOf(mark) === -1) {
+        leaf.marks.push(mark)
+    }
+    return leaf
+}
+
+const setLeaves = (node, leaves) => {
+    if (leaves.length === 1 && leaves[0].text.length === 0) {
+        node.leaves = []
+    } else {
+        node.leaves = leaves
+    }
 }

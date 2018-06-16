@@ -7,6 +7,7 @@ import { Editor } from "slate-react"
 import { Value } from "slate"
 import Automerge from "automerge"
 import EditList from "slate-edit-list"
+import { isKeyHotkey } from "is-hotkey"
 import Immutable from "immutable";
 import React from "react"
 import "./client.css";
@@ -42,10 +43,14 @@ function renderNode(props) {
             return <div {...attributes}>{children}</div>;
         case "heading":
             return <h1 {...attributes}>{children}</h1>;
-        default:
-            return <div {...attributes}>{children}</div>;
     }
 }
+
+const isBoldHotkey = isKeyHotkey('mod+b')
+const isItalicHotkey = isKeyHotkey('mod+i')
+const isUnderlinedHotkey = isKeyHotkey('mod+u')
+const isCodeHotkey = isKeyHotkey('mod+`')
+
 
 
 export class Client extends React.Component {
@@ -98,7 +103,13 @@ export class Client extends React.Component {
      **************************************/
     onChange = ({ operations, value }) => {
         this.setState({ value: value })
-        applySlateOperations(this.docSet, this.props.docId, operations, this.props.clientId)
+        if (!this.isSetSelection(operations)) {
+            applySlateOperations(this.docSet, this.props.docId, operations, this.props.clientId)
+        }
+    }
+
+    isSetSelection = (operations) => {
+        return operations.size === 1 && operations.get(0).type === "set_selection"
     }
 
     /***************************************
@@ -139,6 +150,7 @@ export class Client extends React.Component {
         const newJson = automergeJsonToSlate({
             "document": { ...doc.note }
         })
+        const value = Value.fromJSON(newJson);
         this.setState({ value: Value.fromJSON(newJson) })
     }
 
@@ -175,6 +187,41 @@ export class Client extends React.Component {
         }
         this.setState({ online: isOnline })
     }
+
+  onKeyDown = (event, change) => {
+    let mark
+
+    if (isBoldHotkey(event)) {
+      mark = 'bold'
+    } else if (isItalicHotkey(event)) {
+      mark = 'italic'
+    } else if (isUnderlinedHotkey(event)) {
+      mark = 'underlined'
+    } else if (isCodeHotkey(event)) {
+      mark = 'code'
+    } else {
+      return
+    }
+
+    event.preventDefault()
+    change.toggleMark(mark)
+    return true
+  }
+
+
+  renderMark = props => {
+    const { children, mark, attributes } = props
+    switch (mark.type) {
+      case 'bold':
+        return <strong {...attributes}>{children}</strong>
+      case 'code':
+        return <code {...attributes}>{children}</code>
+      case 'italic':
+        return <em {...attributes}>{children}</em>
+      case 'underlined':
+        return <u {...attributes}>{children}</u>
+    }
+  }
 
     /********************
      * Render functions *
@@ -258,8 +305,10 @@ export class Client extends React.Component {
                         <Editor
                             key={this.props.clientId}
                             ref={(e) => { this.editor = e }}
+                            renderMark={this.renderMark}
                             renderNode={renderNode}
                             onChange={this.onChange}
+                            onKeyDown={this.onKeyDown}
                             plugins={plugins}
                             value={this.state.value}
                         />

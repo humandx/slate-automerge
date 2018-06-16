@@ -6,7 +6,7 @@
 const createLeaf = (leaf) => {
     let newLeaf = {
         object: "leaf",
-        marks: [],
+        marks: leaf.marks,
         text: leaf.text.join("")
     }
     return newLeaf

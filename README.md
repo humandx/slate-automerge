@@ -263,7 +263,7 @@ This converts the Slate operation to Automerge operations, applies it to the cli
 
 ## Known issues/limitations:
 1) Syncing multiple documents when there are large changes may break. This is solved by #2 above.
-2) Currently does not include support for marks (especially with the Slate 0.34 update). For now, we just assume that 1 leaf exists in Text nodes.
+2) Currently includes very limited support for marks (especially with the Slate 0.34 update). Due to the leaf structure, if someone marks up character when someone else is writing on the same line, we could lose someone's changes. In a strange way, the Slate.Character model may have been better for this.
 3) It seems like there are too many Automerge operations for adding a single character. The Automerge operations build a node that isn't used...
 
 ## Questions / Notes / Optimizations todos
