@@ -156,20 +156,9 @@ const applySlateOperationsHelper = (doc, operations) => {
                 let one = currentNode.nodes[index - 1];
                 let two = currentNode.nodes[index];
                 if (one.object === "text") {
-                    // TOFIX: This is to strip out the objectId and create a new list.
-                    // Not ideal at all but Slate can't do the linking that Automerge can
-                    // and it's alot of work to try to move references in Slate.
-                    // See Note above.
-                    let temp = JSON.parse(JSON.stringify(two.leaves[0].text))
-                    // one.leaves.push(...temp)
-                    one.leaves[0].text.push(...temp)
+                    one.leaves[0].text.push(...two.leaves[0].text)
                 } else {
-                    // TOFIX: This is to strip out the objectId and create a new list.
-                    // Not ideal at all but Slate can't do the linking that Automerge can
-                    // and it's alot of work to try to move references in Slate.
-                    // See Note above.
-                    let temp = JSON.parse(JSON.stringify(two.nodes))
-                    one.nodes.push(...temp)
+                    one.nodes.push(...two.nodes)
                 }
                 currentNode.nodes.deleteAt(index, 1);
                 break;
