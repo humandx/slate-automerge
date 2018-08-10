@@ -53,7 +53,7 @@ export class Client extends React.Component {
     constructor(props) {
         super(props)
 
-        this.doc = Automerge.init();
+        this.doc = Automerge.init(`client:${this.props.clientId}-1234`);
         this.docSet = new Automerge.DocSet()
         this.onChange = this.onChange.bind(this)
 
