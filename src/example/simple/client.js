@@ -2,7 +2,7 @@
  * The Slate client.
  */
 
-import { applyAutomergeOperations, applySlateOperations, automergeJsonToSlate } from "../libs/slateAutomergeBridge"
+import { applyAutomergeOperations, applySlateOperations, automergeJsonToSlate } from "../../libs/slateAutomergeBridge"
 import { Editor } from "slate-react"
 import { Value } from "slate"
 import Automerge from "automerge"

@@ -1,4 +1,4 @@
-export const initialValue = {
+module.exports.initialValue = {
     "document": {
         "nodes": [
             {
