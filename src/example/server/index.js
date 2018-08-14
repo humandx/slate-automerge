@@ -11,17 +11,19 @@ const SlateAutomergeBridge = require("../../../dist/slateAutomergeBridge")
 const { slateCustomToJson } = SlateAutomergeBridge
 const Value = Slate.Value
 
-const docId = 1;
-let doc = Automerge.init(`server-1234`);
-const initialSlateValue = Value.fromJSON(initialValue);
-doc = Automerge.change(doc, "Initialize Slate state", doc => {
-    doc.note = slateCustomToJson(initialSlateValue.document);
-})
-// const savedAutomergeDoc = Automerge.save(doc);
+const createNewDocument = function(docId) {
+  let doc = Automerge.init(`server-1234`);
+  const initialSlateValue = Value.fromJSON(initialValue);
+  doc = Automerge.change(doc, "Initialize Slate state", doc => {
+      doc.note = slateCustomToJson(initialSlateValue.document);
+  })
+  // const savedAutomergeDoc = Automerge.save(doc);
+  docSet.setDoc(docId, doc);
+}
+
 let connections = {};
 let docSet = new Automerge.DocSet();
-docSet.setDoc(docId, doc);
-
+createNewDocument(1)
 
 app.get('/', function(req, res) {
   res.sendFile(__dirname + '/index.html');
@@ -39,11 +41,13 @@ io.on('connection', function(socket) {
   });
 
   socket.on('join_document', function({clientId, docId}) {
-    socket.join(docId, () =>{
-      if (!connections[docId]) {
-        connections[docId] = {};
-      }
-      connections[docId][clientId] = new Automerge.Connection(
+    docId  = Number(docId)
+    if (!docSet.getDoc(docId)) {
+      createNewDocument(docId)
+    }
+
+    if (!connections[clientId]) {
+      connections[clientId] = new Automerge.Connection(
           docSet,
           (message) => {
               socket.emit("send_operation", message)
@@ -51,20 +55,26 @@ io.on('connection', function(socket) {
               // socket.to(docId).emit("send_operation", message)
           }
       )
-      connections[docId][clientId].open()
-    })
+      connections[clientId].open()
+    }
+
+    socket.join(docId)
   });
 
   socket.on("send_operation", function(data) {
-    const {clientId, docId, msg} = data
-    connections[docId][clientId].receiveMsg(msg)
+    let {clientId, docId, msg} = data
+    docId = Number(docId)
+    connections[clientId].receiveMsg(msg)
   })
 
   socket.on('leave_document', function({clientId, docId}) {
-    socket.leave(docId, () => {
-      connections[docId][clientId].close()
-      delete connections[docId][clientId]
-    })
+    docId = Number(docId)
+    socket.leave(docId)
+  });
+
+  socket.on('will_disconnect', function({clientId}) {
+    connections[clientId].close()
+    delete connections[clientId]
   });
 
   socket.on('disconnect', function() {

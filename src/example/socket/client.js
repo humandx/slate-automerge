@@ -2,7 +2,7 @@
  * The Slate client.
  */
 
-import { applyAutomergeOperations, applySlateOperations, automergeJsonToSlate } from "../../libs/slateAutomergeBridge"
+import { applyAutomergeOperations, applySlateOperations, automergeJsonToSlate, slateCustomToJson} from "../../libs/slateAutomergeBridge"
 import { Editor } from "slate-react"
 import { Value } from "slate"
 import Automerge from "automerge"
@@ -10,9 +10,10 @@ import EditList from "slate-edit-list"
 import Immutable from "immutable";
 import io from 'socket.io-client';
 import React from "react"
+import uuid from 'uuid'
 import "./client.css";
 
-
+const initialValue = require("../../utils/initialSlateValue").initialValue
 const plugin = EditList();
 const plugins = [plugin];
 
@@ -54,7 +55,7 @@ export class Client extends React.Component {
     constructor(props) {
         super(props)
 
-        this.doc = Automerge.init(`client:${this.props.clientId}-1234`);
+        this.clientId = `client:${this.props.clientId}-${uuid()}`
         this.docSet = new Automerge.DocSet()
         this.onChange = this.onChange.bind(this)
         this.socket = null
@@ -66,33 +67,67 @@ export class Client extends React.Component {
             }
         )
 
-        const initialValue = automergeJsonToSlate({
-            "document": { ...this.doc.note }
-        })
-        const initialSlateValue = Value.fromJSON(initialValue)
-
         this.state = {
-            value: initialSlateValue,
+            value: null,
             online: true,
+            docId: this.props.initialDocId,
         }
     }
 
     componentDidMount = () => {
-        this.initializeConnection()
+        this.connect()
+        this.joinDocument(this.state.docId)
+        this.getAndSetDoc(this.state.docId)
     }
 
     componentWillUnmount = () => {
         this.disconnect()
     }
 
-    initializeConnection = () => {
-        this.connection.open()
-        this.docSet.setDoc(this.props.docId, this.doc)
-        this.connect(this.props.clientId)
-        this.sendMessage({
-            docId: this.props.docId,
-            clock: Immutable.Map(),
+    createNewDocument = (docId) => {
+        let doc = Automerge.init(this.clientId)
+        const initialSlateValue = Value.fromJSON(initialValue)
+        doc = Automerge.change(doc, "Initialize Slate state", doc => {
+          doc.note = slateCustomToJson(initialSlateValue.document)
         })
+        this.docSet.setDoc(docId, doc)
+        const newValue = automergeJsonToSlate({"document": {...doc.note}})
+        const value = Value.fromJSON(newValue)
+        return {doc, value}
+    }
+
+    getAndSetDoc = (docId) => {
+        if (!docId) { docId = this.state.docId }
+        const doc = this.docSet.getDoc(docId)
+
+        if (!doc) {
+            this.sendMessage({
+                clock: null,
+                docId: docId,
+            }, docId)
+            this.setState({
+                value: null,
+                docId: docId,
+            })
+        } else {
+
+            const clock = doc._state.getIn(["opSet", "clock"]);
+
+            this.sendMessage({
+                clock: clock,
+                docId: docId,
+            }, docId)
+
+            if (docId !== this.state.docId) {
+                // this.refreshDocumentFromAutomerge(docId)
+                const newValue = automergeJsonToSlate({"document": {...doc.note}})
+                const value = Value.fromJSON(newValue)
+                this.setState({
+                    value: value,
+                    docId: docId,
+                })
+            }
+        }
     }
 
     /**************************************
@@ -100,46 +135,66 @@ export class Client extends React.Component {
      **************************************/
     onChange = ({ operations, value }) => {
         this.setState({ value: value })
-        applySlateOperations(this.docSet, this.props.docId, operations, this.props.clientId)
+        applySlateOperations(this.docSet, this.state.docId, operations, this.clientId)
     }
 
     /**************************************
      * SOCKET OPERATIONS                  *
      **************************************/
-    connect = (clientId) => {
+    connect = () => {
         if (!this.socket) {
-            this.socket = io("http://localhost:5000", {query: {clientId: clientId}})
+            this.clientId = `client:${this.props.clientId}-${uuid()}`
+            this.socket = io("http://localhost:5000", {query: {clientId: this.clientId}})
+            
+            this.docSet = new Automerge.DocSet()
+            this.connection = new Automerge.Connection(
+                this.docSet,
+                (msg) => {
+                    this.sendMessage(msg)
+                }
+            )
+        } else {
+            this.socket.open()
         }
-        this.joinDocument()
+
+        if (!this.socket.hasListeners("send_operation")) {
+            this.socket.on("send_operation", this.updateWithRemoteChanges.bind(this))            
+        }
+        
+        this.connection.open()
+        this.socket.emit("connect", {clientId: this.clientId})
     }
 
     joinDocument = (docId) => {
+        if (!docId) { docId = this.state.docId }
         if (this.socket) {
-            const data = { clientId: this.props.clientId, docId: this.props.docId }
+            const data = { clientId: this.clientId, docId: docId }
             this.socket.emit("join_document", data)
-            this.socket.on("send_operation", this.updateWithRemoteChanges)
         }
     }
 
     leaveDocument = (docId) => {
+        if (!docId) { docId = this.state.docId }
         if (this.socket) {
-            const data = { clientId: this.props.clientId, docId: this.props.docId }
+            const data = { clientId: this.clientId, docId: docId }
             this.socket.emit("leave_document", data)
-            this.socket.removeAllListeners()
         }
     }
 
     disconnect = () => {
         if (this.socket) {
-            const data = { clientId: this.props.clientId }
-            this.leaveDocument(data)
+            this.connection.close()
+            this.leaveDocument()
+            this.socket.emit("will_disconnect", {clientId: this.clientId})
+            this.socket.removeListener("send_operation")
             this.socket.close()
-            this.socket = undefined
+            this.socket = null
         }
     }
 
-    sendMessage = (msg) => {
-        const data = { clientId: this.props.clientId, docId: this.props.docId, msg }
+    sendMessage = (msg, docId) => {
+        if (!docId) { docId = this.state.docId }
+        const data = { clientId: this.clientId, docId: docId, msg }
         if (this.socket) {
             this.socket.emit("send_operation", data)
         }
@@ -154,10 +209,20 @@ export class Client extends React.Component {
      * @param {Object} msg - A message created by Automerge.Connection
      */
     updateWithRemoteChanges = (msg) => {
-        console.debug(`Client ${this.props.clientId} received message:`)
+        console.debug(`Client ${this.clientId} received message:`)
         console.debug(msg)
-        const currentDoc = this.docSet.getDoc(this.props.docId)
+        const currentDoc = this.docSet.getDoc(msg.docId)
         const docNew = this.connection.receiveMsg(msg)
+
+        if (msg.docId !== this.state.docId) return
+        if (!currentDoc && docNew) {
+            const newValue = automergeJsonToSlate({"document": {...docNew.note}})
+            const value = Value.fromJSON(newValue)
+            this.setState({ value: value })
+            return
+        }
+        if (!currentDoc && !docNew) return
+
         const opSetDiff = Automerge.diff(currentDoc, docNew)
         if (opSetDiff.length !== 0) {
             let change = this.state.value.change()
@@ -179,11 +244,41 @@ export class Client extends React.Component {
      *     a re-render drops the keyboard).
      */
     updateSlateFromAutomerge = () => {
-        const doc = this.docSet.getDoc(this.props.docId)
+        const doc = this.docSet.getDoc(this.state.docId)
         const newJson = automergeJsonToSlate({
             "document": { ...doc.note }
         })
         this.setState({ value: Value.fromJSON(newJson) })
+    }
+
+    /**********************************************
+     * Reload document from server.               *
+     **********************************************/
+    /**
+     * @function refreshDocumentFromAutomerge
+     * @desc
+     */
+    refreshDocumentFromAutomerge = (docId) => {
+        if (!docId) { docId = this.state.docId }
+        const doc = this.docSet.getDoc(docId)
+        const clock = doc._state.getIn(["opSet", "clock"]);
+
+        this.sendMessage({
+            clock: clock,
+            docId: docId,
+        }, docId)
+    }
+
+    /**************************************
+     * Change document                    *
+     **************************************/
+    changeDocId = (event) => {
+        const newDocId = Number(event.target.value)
+        if (newDocId) {
+            this.joinDocument(newDocId)
+            this.leaveDocument(this.state.docId)
+            this.getAndSetDoc(newDocId)
+        }
     }
 
     /**************************************
@@ -209,16 +304,11 @@ export class Client extends React.Component {
         // If offline, close socket connection
 
         if (isOnline) {
-            this.joinDocument()
-            this.connection.open()
-            let clock = this.docSet.getDoc(this.props.docId)._state.getIn(["opSet", "clock"]);
-            this.sendMessage({
-                clock: clock,
-                docId: this.props.docId,
-            })
+            this.connect()
+            this.joinDocument(this.state.docId)
+            this.getAndSetDoc(this.state.docId)
         } else {
-            this.connection.close()
-            this.leaveDocument()
+            this.disconnect()
         }
         this.setState({ online: isOnline })
     }
@@ -231,12 +321,17 @@ export class Client extends React.Component {
      * @desc Render the header for the client.
      */
     renderHeader = () => {
-        let onlineText = this.state.online ? "CURRENTLY LIVE SYNCING" : "CURRENTLY OFFLINE";
-        let onlineTextClass = this.state.online ? "client-online-text green" : "client-online-text red";
-        let toggleButtonText = this.state.online ? "GO OFFLINE" : "GO ONLINE";
+        const onlineText = this.state.online ? "CURRENTLY LIVE SYNCING" : "CURRENTLY OFFLINE";
+        const onlineTextClass = this.state.online ? "client-online-text green" : "client-online-text red";
+        const toggleButtonText = this.state.online ? "GO OFFLINE" : "GO ONLINE";
 
-        let actorId = this.doc._actorId;
-        actorId = actorId.substr(0, actorId.indexOf("-"))
+        const currentDoc = this.docSet.getDoc(this.state.docId)
+        let actorId;
+        try {
+            actorId = currentDoc._actorId.substr(0, actorId.indexOf("-"))
+        } catch (e) {
+            // pass
+        }
 
         return (
             <div>
@@ -244,12 +339,24 @@ export class Client extends React.Component {
                     <tbody>
                         <tr><td colSpan="2" className={onlineTextClass}>{onlineText}</td></tr>
                         <tr>
-                            <td>Client: {this.props.clientId}</td>
+                            <td>Client: {this.clientId}</td>
                             <td><button className="client-online-button" onClick={this.toggleConnectionButton}>{toggleButtonText}</button></td>
                         </tr>
                         <tr>
                             <td>{this.props.debuggingMode && <span>Actor Id: {actorId}</span>}</td>
-                            <td><button className="client-online-button" onClick={this.updateSlateFromAutomerge}>Sync Slate</button></td>
+                            <td><button className="client-online-button" onClick={() => {this.getAndSetDoc(this.state.docId)}}>Reload from server</button></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <span>Doc Id: {actorId}</span>
+                                <input
+                                    type="number"
+                                    className="numclient-input"
+                                    onChange={this.changeDocId}
+                                    value={this.state.docId}
+                                    min={1}
+                                />
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -264,7 +371,7 @@ export class Client extends React.Component {
      */
     renderInternalClock = () => {
         try {
-            let clockList = this.docSet.getDoc(this.props.docId)._state.getIn(["opSet", "clock"]);
+            let clockList = this.docSet.getDoc(this.state.docId)._state.getIn(["opSet", "clock"]);
             let clockComponents = [];
             clockList.forEach((value, actorId) => {
                 actorId = actorId.substr(0, actorId.indexOf("-"))
@@ -297,13 +404,16 @@ export class Client extends React.Component {
     }
 
     render = () => {
+        if (this.state.value === null) {
+            return "Loading..."
+        }
         return (
             <div>
                 {this.renderHeader()}
                 <table className="client-table"><tbody><tr>
                     <td className="client-editor">
                         <Editor
-                            key={this.props.clientId}
+                            key={this.clientId}
                             ref={(e) => { this.editor = e }}
                             renderNode={renderNode}
                             onChange={this.onChange}
