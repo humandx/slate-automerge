@@ -106,7 +106,6 @@ export class Client extends React.Component {
                 docId: docId,
             }, docId)
             this.setState({
-                value: null,
                 docId: docId,
             })
         } else {
