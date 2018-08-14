@@ -82,7 +82,7 @@ class App extends React.Component {
                     <Client
                         clientId={i}
                         debuggingMode={this.state.debuggingMode}
-                        docId={docId}
+                        initialDocId={docId}
                         key={`client-${i}`}
                         ref={(client) => { this.clients[i] = client }}
                     />
