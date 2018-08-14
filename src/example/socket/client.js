@@ -119,7 +119,6 @@ export class Client extends React.Component {
             }, docId)
 
             if (docId !== this.state.docId) {
-                // this.refreshDocumentFromAutomerge(docId)
                 const newValue = automergeJsonToSlate({"document": {...doc.note}})
                 const value = Value.fromJSON(newValue)
                 this.setState({
@@ -145,16 +144,6 @@ export class Client extends React.Component {
         if (!this.socket) {
             this.clientId = `client:${this.props.clientId}-${uuid()}`
             this.socket = io("http://localhost:5000", {query: {clientId: this.clientId}})
-            
-            this.docSet = new Automerge.DocSet()
-            this.connection = new Automerge.Connection(
-                this.docSet,
-                (msg) => {
-                    this.sendMessage(msg)
-                }
-            )
-        } else {
-            this.socket.open()
         }
 
         if (!this.socket.hasListeners("send_operation")) {
@@ -163,6 +152,22 @@ export class Client extends React.Component {
         
         this.connection.open()
         this.socket.emit("connect", {clientId: this.clientId})
+    }
+
+    reconnect = () => {
+        if (!this.socket) {
+            this.clientId = `client:${this.props.clientId}-${uuid()}`
+            this.socket = io("http://localhost:5000", {query: {clientId: this.clientId}})
+        }
+
+        if (!this.socket.hasListeners("send_operation")) {
+            this.socket.on("send_operation", this.updateWithRemoteChanges.bind(this))            
+        }
+        
+        this.joinDocument(this.state.docId)
+        this.connection.open()
+        this.socket.emit("connect", {clientId: this.clientId})
+        this.getAndSetDoc(this.state.docId)
     }
 
     joinDocument = (docId) => {
@@ -187,8 +192,8 @@ export class Client extends React.Component {
             this.leaveDocument()
             this.socket.emit("will_disconnect", {clientId: this.clientId})
             this.socket.removeListener("send_operation")
-            this.socket.close()
-            this.socket = null
+            // this.socket.close()
+            // this.socket = null
         }
     }
 
@@ -258,15 +263,11 @@ export class Client extends React.Component {
      * @function refreshDocumentFromAutomerge
      * @desc
      */
-    refreshDocumentFromAutomerge = (docId) => {
-        if (!docId) { docId = this.state.docId }
-        const doc = this.docSet.getDoc(docId)
-        const clock = doc._state.getIn(["opSet", "clock"]);
-
-        this.sendMessage({
-            clock: clock,
-            docId: docId,
-        }, docId)
+    refreshDocumentFromAutomerge = (event) => {
+        if (this.state.online) {
+            this.toggleConnection(false)            
+        }
+        setTimeout(() => {this.toggleConnection(true)}, 200)
     }
 
     /**************************************
@@ -304,9 +305,7 @@ export class Client extends React.Component {
         // If offline, close socket connection
 
         if (isOnline) {
-            this.connect()
-            this.joinDocument(this.state.docId)
-            this.getAndSetDoc(this.state.docId)
+            this.reconnect()
         } else {
             this.disconnect()
         }
@@ -344,7 +343,7 @@ export class Client extends React.Component {
                         </tr>
                         <tr>
                             <td>{this.props.debuggingMode && <span>Actor Id: {actorId}</span>}</td>
-                            <td><button className="client-online-button" onClick={() => {this.getAndSetDoc(this.state.docId)}}>Reload from server</button></td>
+                            <td><button className="client-online-button" onClick={this.refreshDocumentFromAutomerge}>Reload from server</button></td>
                         </tr>
                         <tr>
                             <td>
