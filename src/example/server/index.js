@@ -29,6 +29,17 @@ app.get('/', function(req, res) {
   res.sendFile(__dirname + '/index.html');
 });
 
+const hasPermission = (clientId, docId) => {
+    // Current check just makes sure clients with odd ids can only read
+    // documents with odd ids.
+    const clientNum = Number(clientId.substr(7, clientId.indexOf("-")-7))
+    docId  = Number(docId)
+    if (clientNum % 2 == docId % 2) {
+      return false
+    }
+    return true
+}
+
 io.on('connection', function(socket) {
 
   socket.on('chat message', function(msg) {
@@ -40,7 +51,11 @@ io.on('connection', function(socket) {
     console.log('user connects socket');
   });
 
-  socket.on('join_document', function({clientId, docId}) {
+  socket.on('join_document', function({clientId, docId}, callback) {
+
+    // Permissions check
+    if (!hasPermission(clientId, docId)) { return }
+
     docId  = Number(docId)
     if (!docSet.getDoc(docId)) {
       createNewDocument(docId)
@@ -50,15 +65,15 @@ io.on('connection', function(socket) {
       connections[clientId] = new Automerge.Connection(
           docSet,
           (message) => {
+              if (!hasPermission(clientId, message.docId)) { return }
               socket.emit("send_operation", message)
-              // TO FIX: Not sure why .to doesn't work as expected
-              // socket.to(docId).emit("send_operation", message)
           }
       )
       connections[clientId].open()
     }
 
     socket.join(docId)
+    callback(true)
   });
 
   socket.on("send_operation", function(data) {

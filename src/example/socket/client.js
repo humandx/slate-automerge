@@ -76,8 +76,11 @@ export class Client extends React.Component {
 
     componentDidMount = () => {
         this.connect()
-        this.joinDocument(this.state.docId)
-        this.getAndSetDoc(this.state.docId)
+        this.joinDocument(this.state.docId, (result) => {
+            if (result) {
+                this.getAndSetDoc(this.state.docId)                
+            }
+        })
     }
 
     componentWillUnmount = () => {
@@ -151,6 +154,7 @@ export class Client extends React.Component {
         
         this.connection.open()
         this.socket.emit("connect", {clientId: this.clientId})
+        this.socket.emit("did_connect", {clientId: this.clientId})
     }
 
     reconnect = () => {
@@ -163,17 +167,26 @@ export class Client extends React.Component {
             this.socket.on("send_operation", this.updateWithRemoteChanges.bind(this))            
         }
         
-        this.joinDocument(this.state.docId)
-        this.connection.open()
-        this.socket.emit("connect", {clientId: this.clientId})
-        this.getAndSetDoc(this.state.docId)
+        this.joinDocument(this.state.docId, (result) => {
+            if (result) {
+                this.connection.open()
+                this.socket.emit("connect", {clientId: this.clientId})
+                this.getAndSetDoc(this.state.docId)                            
+            }
+        })
     }
 
-    joinDocument = (docId) => {
+    joinDocument = (docId, callback) => {
         if (!docId) { docId = this.state.docId }
         if (this.socket) {
             const data = { clientId: this.clientId, docId: docId }
-            this.socket.emit("join_document", data)
+            this.socket.emit("join_document", data, (result) => {
+                if (callback) {
+                    callback(result) 
+                } else {
+                    this.setState({value: null})
+                }
+            })
         }
     }
 
@@ -275,9 +288,12 @@ export class Client extends React.Component {
     changeDocId = (event) => {
         const newDocId = Number(event.target.value)
         if (newDocId) {
-            this.joinDocument(newDocId)
-            this.leaveDocument(this.state.docId)
-            this.getAndSetDoc(newDocId)
+            this.joinDocument(newDocId, (result) => {
+                if (result) {
+                    this.leaveDocument(this.state.docId)
+                    this.getAndSetDoc(newDocId)                    
+                }
+            })
         }
     }
 
@@ -402,12 +418,9 @@ export class Client extends React.Component {
     }
 
     render = () => {
-        if (this.state.value === null) {
-            return "Loading..."
-        }
-        return (
-            <div>
-                {this.renderHeader()}
+        let body;
+        if (this.state.value !== null) {
+            body = (
                 <table className="client-table"><tbody><tr>
                     <td className="client-editor">
                         <Editor
@@ -423,6 +436,12 @@ export class Client extends React.Component {
                         {this.renderInternalClock()}
                     </td>}
                 </tr></tbody></table>
+            );
+        }
+        return (
+            <div>
+                {this.renderHeader()}
+                {body}
             </div>
         )
     }
