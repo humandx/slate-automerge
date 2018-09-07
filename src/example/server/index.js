@@ -17,7 +17,6 @@ const createNewDocument = function(docId) {
   doc = Automerge.change(doc, "Initialize Slate state", doc => {
       doc.note = slateCustomToJson(initialSlateValue.document);
   })
-  // const savedAutomergeDoc = Automerge.save(doc);
   docSet.setDoc(docId, doc);
 }
 
@@ -29,9 +28,16 @@ app.get('/', function(req, res) {
   res.sendFile(__dirname + '/index.html');
 });
 
+
+/**
+ * @function hasPermission
+ * @desc Check to see if the client has permission to view a document.
+ *    Current check just makes sure clients with odd ids can only read
+ *    documents with odd ids.
+ * @param {number} clientId - The ID of the client requesting permission.
+ * @param {number} docId - The ID of the document to join.
+ */
 const hasPermission = (clientId, docId) => {
-    // Current check just makes sure clients with odd ids can only read
-    // documents with odd ids.
     const clientNum = Number(clientId.substr(7, clientId.indexOf("-")-7))
     docId  = Number(docId)
     if (clientNum % 2 == docId % 2) {
@@ -51,8 +57,10 @@ io.on('connection', function(socket) {
     console.log('user connects socket');
   });
 
+  /**
+   * @desc Have the client given by clientId join the document given by docId.
+   */
   socket.on('join_document', function({clientId, docId}, callback) {
-
     // Permissions check
     if (!hasPermission(clientId, docId)) { return }
 
@@ -76,17 +84,26 @@ io.on('connection', function(socket) {
     callback(true)
   });
 
+  /**
+   * @desc Process the Automerge operation from a client.
+   */
   socket.on("send_operation", function(data) {
     let {clientId, docId, msg} = data
     docId = Number(docId)
     connections[clientId].receiveMsg(msg)
   })
 
+  /**
+   * @desc Client leaves a document.
+   */
   socket.on('leave_document', function({clientId, docId}) {
     docId = Number(docId)
     socket.leave(docId)
   });
 
+  /**
+   * @desc Client disconnects from the server.
+   */
   socket.on('will_disconnect', function({clientId}) {
     connections[clientId].close()
     delete connections[clientId]

@@ -78,7 +78,7 @@ export class Client extends React.Component {
         this.connect()
         this.joinDocument(this.state.docId, (result) => {
             if (result) {
-                this.getAndSetDoc(this.state.docId)                
+                this.getAndSetDoc(this.state.docId)
             }
         })
     }
@@ -87,18 +87,11 @@ export class Client extends React.Component {
         this.disconnect()
     }
 
-    createNewDocument = (docId) => {
-        let doc = Automerge.init(this.clientId)
-        const initialSlateValue = Value.fromJSON(initialValue)
-        doc = Automerge.change(doc, "Initialize Slate state", doc => {
-          doc.note = slateCustomToJson(initialSlateValue.document)
-        })
-        this.docSet.setDoc(docId, doc)
-        const newValue = automergeJsonToSlate({"document": {...doc.note}})
-        const value = Value.fromJSON(newValue)
-        return {doc, value}
-    }
-
+    /**
+     * @function getAndSetDoc
+     * @desc Get a new document from the server.
+     * @param {number} docId - id for the new document.
+     */
     getAndSetDoc = (docId) => {
         if (!docId) { docId = this.state.docId }
         const doc = this.docSet.getDoc(docId)
@@ -142,6 +135,12 @@ export class Client extends React.Component {
     /**************************************
      * SOCKET OPERATIONS                  *
      **************************************/
+
+    /**
+     * @function connect
+     * @desc Connect to the server, setup listeners, open the Automerge
+     *    connection and emit "connect" and "did_connect" events.
+     */
     connect = () => {
         if (!this.socket) {
             this.clientId = `client:${this.props.clientId}-${uuid()}`
@@ -149,14 +148,18 @@ export class Client extends React.Component {
         }
 
         if (!this.socket.hasListeners("send_operation")) {
-            this.socket.on("send_operation", this.updateWithRemoteChanges.bind(this))            
+            this.socket.on("send_operation", this.updateWithRemoteChanges.bind(this))
         }
-        
+
         this.connection.open()
         this.socket.emit("connect", {clientId: this.clientId})
         this.socket.emit("did_connect", {clientId: this.clientId})
     }
 
+    /**
+     * @function reconnect
+     * @desc Reconnect to the server, setup listeners and open the connection.
+     */
     reconnect = () => {
         if (!this.socket) {
             this.clientId = `client:${this.props.clientId}-${uuid()}`
@@ -164,25 +167,31 @@ export class Client extends React.Component {
         }
 
         if (!this.socket.hasListeners("send_operation")) {
-            this.socket.on("send_operation", this.updateWithRemoteChanges.bind(this))            
+            this.socket.on("send_operation", this.updateWithRemoteChanges.bind(this))
         }
-        
+
         this.joinDocument(this.state.docId, (result) => {
             if (result) {
                 this.connection.open()
                 this.socket.emit("connect", {clientId: this.clientId})
-                this.getAndSetDoc(this.state.docId)                            
+                this.getAndSetDoc(this.state.docId)
             }
         })
     }
 
+    /**
+     * @function joinDocument
+     * @desc Join a document
+     * @param {number} docId - The ID of the document to join.
+     * @param {function} callback - Callback function.
+     */
     joinDocument = (docId, callback) => {
         if (!docId) { docId = this.state.docId }
         if (this.socket) {
             const data = { clientId: this.clientId, docId: docId }
             this.socket.emit("join_document", data, (result) => {
                 if (callback) {
-                    callback(result) 
+                    callback(result)
                 } else {
                     this.setState({value: null})
                 }
@@ -190,6 +199,11 @@ export class Client extends React.Component {
         }
     }
 
+    /**
+     * @function leaveDocument
+     * @desc Leave a document.
+     * @param {number} docId - The ID of the document to join.
+     */
     leaveDocument = (docId) => {
         if (!docId) { docId = this.state.docId }
         if (this.socket) {
@@ -198,6 +212,10 @@ export class Client extends React.Component {
         }
     }
 
+    /**
+     * @function disconnect
+     * @desc Disconnect the Automerge.Connection and disconnect from the socket.
+     */
     disconnect = () => {
         if (this.socket) {
             this.connection.close()
@@ -209,6 +227,12 @@ export class Client extends React.Component {
         }
     }
 
+    /**
+     * @function sendMessage
+     * @desc Disconnect the Automerge.Connection and disconnect from the socket.
+     * @param {Object} msg - The Automerge message to send.
+     * @param {number} docId - The ID of the document to join.
+     */
     sendMessage = (msg, docId) => {
         if (!docId) { docId = this.state.docId }
         const data = { clientId: this.clientId, docId: docId, msg }
@@ -277,7 +301,7 @@ export class Client extends React.Component {
      */
     refreshDocumentFromAutomerge = (event) => {
         if (this.state.online) {
-            this.toggleConnection(false)            
+            this.toggleConnection(false)
         }
         setTimeout(() => {this.toggleConnection(true)}, 200)
     }
@@ -291,7 +315,7 @@ export class Client extends React.Component {
             this.joinDocument(newDocId, (result) => {
                 if (result) {
                     this.leaveDocument(this.state.docId)
-                    this.getAndSetDoc(newDocId)                    
+                    this.getAndSetDoc(newDocId)
                 }
             })
         }
