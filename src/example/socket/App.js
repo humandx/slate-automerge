@@ -94,6 +94,8 @@ class App extends React.Component {
             <div>
                 <hr></hr>
                 <div>SOCKET</div>
+                <div>Currently, only clients with odd ids can view documents with odd ids</div>
+                <div>and only clients with even ids can view documents with even ids.</div>
                 <div className="options">
                     <div className="options-text">Options:</div>
                     <div className="options-online">
