@@ -8,8 +8,8 @@
  * simplify the conversion from Automerge operationsto Slate, rather than move,
  * we delete the node and re-insert a new node. This results in more Automerge
  * ops but makes it so that the reverse conversion
- * (in convertAutomerge.automergeOpInsertText) does not need to know the path
- * to the previous node. If we update Automerge to contain the path to the
+ * (in applyAutomergeOperations.automergeOpInsertText) does not need to know the
+ * path to the previous node. If we update Automerge to contain the path to the
  * old node, we can use the move node operation.
  */
 
@@ -57,7 +57,7 @@ const applySlateOperationsHelper = (doc, operations) => {
             path, offset, text, length, mark,
             node, position, properties, newPath
         } = op;
-        const index = path[path.length - 1];
+        const index = path.get(path.size - 1);
         const rest = path.slice(0, -1)
         let currentNode = doc.note;
         switch (op.type) {
@@ -183,10 +183,10 @@ const applySlateOperationsHelper = (doc, operations) => {
                 }
                 break;
             case "move_node":
-                const newIndex = newPath[newPath.length - 1]
-                const newParentPath = newPath.slice(0, -1)
+                const newIndex = newPath.get(newPath.size - 1)
+                let newParentPath = newPath.slice(0, -1)
                 const oldParentPath = path.slice(0, -1)
-                const oldIndex = path[path.length - 1]
+                const oldIndex = path.get(path.size - 1)
 
                 // Remove the old node from it's current parent.
                 oldParentPath.forEach(el => {
@@ -196,13 +196,13 @@ const applySlateOperationsHelper = (doc, operations) => {
 
                 // Find the new target...
                 if (
-                    oldParentPath.every((x, i) => x === newParentPath[i]) &&
-                    oldParentPath.length === newParentPath.length
+                    oldParentPath.every((x, i) => x === newParentPath.get(i)) &&
+                    oldParentPath.size === newParentPath.size
                 ) {
                     // Do nothing
                 } else if (
-                    oldParentPath.every((x, i) => x === newParentPath[i]) &&
-                    oldIndex < newParentPath[oldParentPath.length]
+                    oldParentPath.every((x, i) => x === newParentPath.get(i)) &&
+                    oldIndex < newParentPath.get(oldParentPath.size)
                 ) {
                     // Remove the old node from it's current parent.
                     currentNode.nodes.deleteAt(oldIndex, 1);
@@ -210,7 +210,7 @@ const applySlateOperationsHelper = (doc, operations) => {
                     // Otherwise, if the old path removal resulted in the new path being no longer
                     // correct, we need to decrement the new path at the old path's last index.
                     currentNode = doc.note;
-                    newParentPath[oldParentPath.length]--
+                    newParentPath = newParentPath.set(oldParentPath.size, newParentPath.get(oldParentPath.size)-1)
                     newParentPath.forEach(el => {
                         currentNode = currentNode.nodes[el];
                     })
