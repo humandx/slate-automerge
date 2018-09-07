@@ -6,7 +6,7 @@ import Automerge from "automerge"
 import React from "react"
 import "./App.css";
 
-const docId = 1;
+const docId = 0;
 let doc = Automerge.init();
 const initialSlateValue = Value.fromJSON(initialValue);
 doc = Automerge.change(doc, "Initialize Slate state", doc => {

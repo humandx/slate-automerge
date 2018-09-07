@@ -35,9 +35,9 @@ const hasPermission = (clientId, docId) => {
     const clientNum = Number(clientId.substr(7, clientId.indexOf("-")-7))
     docId  = Number(docId)
     if (clientNum % 2 == docId % 2) {
-      return false
+      return true
     }
-    return true
+    return false
 }
 
 io.on('connection', function(socket) {

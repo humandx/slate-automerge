@@ -3,7 +3,7 @@ import React from "react"
 import "./App.css";
 
 const maxClients = 6;
-const docId = 1;
+const docId = 0;
 
 
 class App extends React.Component {
