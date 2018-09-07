@@ -1,12 +1,12 @@
 import { Client } from "./client"
-import { initialValue } from "../utils/initialSlateValue"
-import { slateCustomToJson } from "../libs/slateAutomergeBridge"
+import { initialValue } from "../../utils/initialSlateValue"
+import { slateCustomToJson } from "../../libs/slateAutomergeBridge"
 import { Value } from "slate"
 import Automerge from "automerge"
 import React from "react"
 import "./App.css";
 
-const docId = 1;
+const docId = 0;
 let doc = Automerge.init();
 const initialSlateValue = Value.fromJSON(initialValue);
 doc = Automerge.change(doc, "Initialize Slate state", doc => {
@@ -161,6 +161,7 @@ class App extends React.Component {
         return (
             <div>
                 <hr></hr>
+                <div>SIMPLE</div>
                 <div className="options">
                     <div className="options-text">Options:</div>
                     <div className="options-online">
